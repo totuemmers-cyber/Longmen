@@ -7150,8 +7150,26 @@
             ctx.restore();
         }
 
+        // Measure option text to determine panel width
+        const optFont = `${Math.round(11*s)}px 'Courier New','Microsoft YaHei','PingFang SC','Noto Sans SC',monospace`;
+        ctx.save();
+        ctx.font = optFont;
+        const optCount = quizData.options.length;
+        const minOptW = 60 * s;
+        const padding = 16 * s; // horizontal padding inside each button
+        let maxTextW = 0;
+        for (let i = 0; i < optCount; i++) {
+            const tw = ctx.measureText(quizData.options[i].word).width;
+            if (tw > maxTextW) maxTextW = tw;
+        }
+        ctx.restore();
+        const optW = Math.max(minOptW, maxTextW + padding);
+        const gap = 6 * s;
+        const panelPad = 20 * s; // left+right panel padding
+        const neededW = optCount * optW + (optCount - 1) * gap + panelPad;
+        const panelW = Math.max(280 * s, neededW);
+
         // Panel at bottom center
-        const panelW = 280 * s;
         const panelH = (quizResult ? 50 : 100) * s;
         const panelX = (WORLD_W * s - panelW) / 2;
         const panelY = WORLD_H * s - panelH - 15 * s;
@@ -7198,16 +7216,15 @@
             ctx.fillStyle = '#e0d8c0';
             ctx.fillText(`"${quizData.germanWord}" = ?`, cx, panelY + 28*s);
 
-            // Options
+            // Options — centered within panel
             quizOptionRects = [];
             const optY = panelY + 48*s;
-            const gap = 6*s;
-            const optCount = quizData.options.length;
-            const optW = (panelW - 20*s - (optCount-1)*gap) / optCount;
+            const totalOptsW = optCount * optW + (optCount - 1) * gap;
+            const optsStartX = panelX + (panelW - totalOptsW) / 2;
             const optH = 48*s;
 
             for (let i = 0; i < optCount; i++) {
-                const ox = panelX + 10*s + i * (optW + gap);
+                const ox = optsStartX + i * (optW + gap);
                 const oy = optY;
                 quizOptionRects.push({ x: ox, y: oy, w: optW, h: optH });
 
@@ -7219,7 +7236,7 @@
                 roundRect(ctx, ox, oy, optW, optH, 4*s);
                 ctx.stroke();
 
-                ctx.font = `${Math.round(11*s)}px 'Courier New','Microsoft YaHei','PingFang SC','Noto Sans SC',monospace`;
+                ctx.font = optFont;
                 ctx.fillStyle = '#d4a030';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
