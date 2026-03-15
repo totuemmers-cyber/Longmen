@@ -2535,6 +2535,9 @@
     let speechBubbles = [];
     let eventLog = [];
     let learnFlashes = [];
+    let calligraphyOverlays = [];
+    let proverbOverlay = null;
+    let proverbMilestonesHit = new Set();
     let npcs = [];
     let npcBubbles = [];
     let canvas, ctx;
@@ -2586,6 +2589,19 @@
         { id: 'rice_sacks',     req: { cook_rice: 5 },           x: 365, y: 195, desc: 'Reissaecke stehen neben der Kueche.' },
         { id: 'silk_canopy',    req: { weave_silk: 2 },          x: 415, y: 265, desc: 'Ein Seidenbaldachin spannt sich auf.' },
         { id: 'ceramic_set',    req: { make_pottery: 2 },        x: 355, y: 195, desc: 'Keramikschalen stehen aufgereiht.' },
+    ];
+
+    const PROVERBS = [
+        { words: 25,  chars: '千里之行始于足下',     pinyin: 'qiānlǐ zhī xíng shǐ yú zúxià',           german: 'Jede lange Reise beginnt mit dem ersten Schritt' },
+        { words: 50,  chars: '学而时习之',           pinyin: 'xué ér shí xí zhī',                       german: 'Lernen und regelmaessig ueben' },
+        { words: 75,  chars: '温故知新',             pinyin: 'wēn gù zhī xīn',                          german: 'Altes wiederholen, Neues verstehen' },
+        { words: 100, chars: '水滴石穿',             pinyin: 'shuǐ dī shí chuān',                       german: 'Steter Tropfen hoehlt den Stein' },
+        { words: 125, chars: '熟能生巧',             pinyin: 'shú néng shēng qiǎo',                     german: 'Uebung macht den Meister' },
+        { words: 150, chars: '有志者事竟成',         pinyin: 'yǒu zhì zhě shì jìng chéng',              german: 'Wo ein Wille ist, ist ein Weg' },
+        { words: 175, chars: '书山有路勤为径',       pinyin: 'shū shān yǒu lù qín wéi jìng',            german: 'Der Berg des Wissens hat einen Pfad: Fleiss' },
+        { words: 200, chars: '活到老学到老',         pinyin: 'huó dào lǎo xué dào lǎo',                 german: 'Man lernt nie aus' },
+        { words: 225, chars: '不积跬步无以至千里',   pinyin: 'bù jī kuǐ bù wú yǐ zhì qiānlǐ',          german: 'Ohne kleine Schritte erreicht man keine tausend Meilen' },
+        { words: 250, chars: '功夫不负有心人',       pinyin: 'gōngfu bù fù yǒuxīn rén',                 german: 'Fleiss enttaeuscht den Entschlossenen nicht' },
     ];
 
     function checkCampMilestones() {
@@ -3090,6 +3106,413 @@
             ctx.fillText('+ ' + this.word, this.x * canvasScale, this.y * canvasScale);
             ctx.restore();
         }
+    }
+
+    // ============================================================
+    //  CALLIGRAPHY OVERLAY (书法 shūfǎ — brush stroke animation)
+    // ============================================================
+    const CJK_FONT = "'Microsoft YaHei','PingFang SC','Noto Sans SC','Noto Sans CJK SC',sans-serif";
+    const INK_COLOR = '#1a0a00';
+    const PARCHMENT_BG = '#f5e6c8';
+    const PARCHMENT_BORDER = '#c4a46a';
+
+    class CalligraphyOverlay {
+        constructor(hanzi, pinyin, german) {
+            this.hanzi = hanzi;
+            this.pinyin = pinyin;
+            this.german = german;
+            this.life = 300; // ~5 seconds at 60fps
+            this.maxLife = 300;
+            this.revealProgress = 0;
+            this.inkDrops = [];
+            // Position in world coords (top-right scroll area)
+            this.wx = WORLD_W - 125;
+            this.wy = 25;
+            this.ww = 110;
+            this.wh = 145;
+            // Pre-render character to offscreen canvas
+            this.offCanvas = document.createElement('canvas');
+            this.offCanvas.width = 128;
+            this.offCanvas.height = 128;
+            this.offCtx = this.offCanvas.getContext('2d');
+            this._renderCharacter();
+            // Generate ink drops for decoration
+            for (let i = 0; i < 6; i++) {
+                this.inkDrops.push({
+                    x: Math.random() * 0.8 + 0.1,
+                    y: Math.random() * 0.8 + 0.1,
+                    r: Math.random() * 2 + 0.5,
+                    alpha: Math.random() * 0.15 + 0.05,
+                    delay: Math.random() * 0.6,
+                });
+            }
+        }
+
+        _renderCharacter() {
+            const c = this.offCtx;
+            const s = 128;
+            c.clearRect(0, 0, s, s);
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            // Ink bleed: draw twice with offset
+            c.font = `bold 90px ${CJK_FONT}`;
+            c.fillStyle = INK_COLOR;
+            c.globalAlpha = 0.25;
+            c.fillText(this.hanzi, s / 2 + 1, s / 2 + 1);
+            c.globalAlpha = 1.0;
+            c.fillText(this.hanzi, s / 2, s / 2);
+        }
+
+        update(dt) {
+            this.life -= dt;
+            // Reveal: ramps 0→1 over first 60% of life
+            const revealEnd = this.maxLife * 0.6;
+            const elapsed = this.maxLife - this.life;
+            this.revealProgress = Math.min(1, elapsed / revealEnd);
+            return this.life > 0;
+        }
+
+        draw(ctx) {
+            if (this.life <= 0) return;
+            const s = canvasScale;
+            // Fade in/out
+            let alpha = 1;
+            const elapsed = this.maxLife - this.life;
+            if (elapsed < this.maxLife * 0.12) alpha = elapsed / (this.maxLife * 0.12);
+            if (this.life < this.maxLife * 0.18) alpha = this.life / (this.maxLife * 0.18);
+
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.95;
+
+            const x = this.wx * s;
+            const y = this.wy * s;
+            const w = this.ww * s;
+            const h = this.wh * s;
+
+            // Parchment/rice paper background
+            ctx.fillStyle = PARCHMENT_BG;
+            ctx.strokeStyle = PARCHMENT_BORDER;
+            ctx.lineWidth = 1.5 * s;
+            roundRect(ctx, x, y, w, h, 4 * s);
+            ctx.fill();
+            ctx.stroke();
+
+            // Subtle paper texture
+            ctx.globalAlpha = alpha * 0.06;
+            for (let i = 0; i < 8; i++) {
+                const tx = x + w * (0.1 + Math.sin(i * 2.7) * 0.4 + 0.4);
+                const ty = y + h * (0.1 + Math.cos(i * 1.9) * 0.35 + 0.35);
+                ctx.beginPath();
+                ctx.arc(tx, ty, (3 + i * 1.5) * s, 0, Math.PI * 2);
+                ctx.fillStyle = '#c8a060';
+                ctx.fill();
+            }
+            ctx.globalAlpha = alpha * 0.95;
+
+            // Red seal stamp decoration (top-left corner)
+            const sealX = x + 8 * s;
+            const sealY = y + 6 * s;
+            const sealSz = 14 * s;
+            ctx.fillStyle = 'rgba(180,30,20,0.15)';
+            ctx.fillRect(sealX, sealY, sealSz, sealSz);
+            ctx.strokeStyle = 'rgba(180,30,20,0.3)';
+            ctx.lineWidth = 0.8 * s;
+            ctx.strokeRect(sealX, sealY, sealSz, sealSz);
+
+            // Character area (centered in upper portion of parchment)
+            const charAreaX = x + (w - 70 * s) / 2;
+            const charAreaY = y + 18 * s;
+            const charAreaW = 70 * s;
+            const charAreaH = 70 * s;
+
+            // Progressive brush reveal with clipping
+            ctx.save();
+            ctx.beginPath();
+            const rp = this.revealProgress;
+
+            if (rp < 0.25) {
+                // Phase 1: Top-left vertical stroke downward
+                const ph = rp / 0.25;
+                const clipW = charAreaW * 0.4;
+                const clipH = charAreaH * ph;
+                this._brushClip(ctx, charAreaX, charAreaY, clipW, clipH, s);
+            } else if (rp < 0.55) {
+                // Phase 2: Expand rightward
+                const ph = (rp - 0.25) / 0.3;
+                const clipW = charAreaW * (0.4 + 0.6 * ph);
+                const clipH = charAreaH * (0.6 + 0.2 * ph);
+                this._brushClip(ctx, charAreaX, charAreaY, clipW, clipH, s);
+            } else if (rp < 0.8) {
+                // Phase 3: Fill bottom
+                const ph = (rp - 0.55) / 0.25;
+                const clipW = charAreaW;
+                const clipH = charAreaH * (0.8 + 0.2 * ph);
+                this._brushClip(ctx, charAreaX, charAreaY, clipW, clipH, s);
+            } else {
+                // Phase 4: Full character
+                ctx.rect(charAreaX - 2 * s, charAreaY - 2 * s, charAreaW + 4 * s, charAreaH + 4 * s);
+            }
+            ctx.clip();
+
+            // Draw the pre-rendered character
+            ctx.drawImage(this.offCanvas, charAreaX, charAreaY, charAreaW, charAreaH);
+
+            // Ink drops that appear during reveal
+            for (const drop of this.inkDrops) {
+                if (rp > drop.delay) {
+                    ctx.globalAlpha = alpha * drop.alpha * Math.min(1, (rp - drop.delay) * 3);
+                    ctx.beginPath();
+                    ctx.arc(
+                        charAreaX + drop.x * charAreaW,
+                        charAreaY + drop.y * charAreaH,
+                        drop.r * s, 0, Math.PI * 2
+                    );
+                    ctx.fillStyle = INK_COLOR;
+                    ctx.fill();
+                }
+            }
+            ctx.restore();
+
+            // Pinyin below character
+            ctx.globalAlpha = alpha * 0.9;
+            ctx.font = `${Math.round(8 * s)}px ${CJK_FONT}`;
+            ctx.fillStyle = '#4a3520';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.pinyin, x + w / 2, y + 98 * s);
+
+            // German translation
+            ctx.font = `${Math.round(7 * s)}px ${CJK_FONT}`;
+            ctx.fillStyle = '#7a6a55';
+            ctx.fillText(this.german, x + w / 2, y + 112 * s);
+
+            // Decorative line
+            ctx.beginPath();
+            ctx.moveTo(x + 15 * s, y + 125 * s);
+            ctx.lineTo(x + w - 15 * s, y + 125 * s);
+            ctx.strokeStyle = 'rgba(180,140,80,0.3)';
+            ctx.lineWidth = 0.5 * s;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        _brushClip(ctx, bx, by, bw, bh, s) {
+            // Create ragged brush-edge clipping path using overlapping circles
+            ctx.rect(bx, by, bw - 4 * s, bh - 4 * s);
+            // Ragged right edge
+            const steps = 8;
+            for (let i = 0; i <= steps; i++) {
+                const cy = by + (bh - 4 * s) * (i / steps);
+                const cx = bx + bw - 4 * s + (Math.sin(i * 2.3 + bw * 0.1) * 3) * s;
+                ctx.moveTo(cx + 4 * s, cy);
+                ctx.arc(cx, cy, 4 * s, 0, Math.PI * 2);
+            }
+            // Ragged bottom edge
+            for (let i = 0; i <= steps; i++) {
+                const cx = bx + (bw - 4 * s) * (i / steps);
+                const cy = by + bh - 4 * s + (Math.cos(i * 1.7 + bh * 0.1) * 3) * s;
+                ctx.moveTo(cx + 4 * s, cy);
+                ctx.arc(cx, cy, 4 * s, 0, Math.PI * 2);
+            }
+        }
+    }
+
+    // ============================================================
+    //  PROVERB OVERLAY (成语 chéngyǔ — milestone calligraphy)
+    // ============================================================
+    class ProverbOverlay {
+        constructor(proverb) {
+            this.chars = [...proverb.chars]; // Array of individual characters
+            this.pinyin = proverb.pinyin;
+            this.german = proverb.german;
+            this.milestone = proverb.words;
+            this.charCount = this.chars.length;
+            // Timing: ~0.8s per char reveal + 3s hold + 2s fade
+            this.revealPerChar = 48; // frames per character reveal
+            this.holdTime = 180; // frames to hold fully revealed
+            this.fadeOutTime = 120; // frames to fade out
+            this.totalLife = this.charCount * this.revealPerChar + this.holdTime + this.fadeOutTime;
+            this.life = this.totalLife;
+            this.maxLife = this.totalLife;
+            // Pre-render each character
+            this.offCanvases = this.chars.map(ch => {
+                const oc = document.createElement('canvas');
+                oc.width = 96;
+                oc.height = 96;
+                const octx = oc.getContext('2d');
+                octx.textAlign = 'center';
+                octx.textBaseline = 'middle';
+                octx.font = `bold 72px ${CJK_FONT}`;
+                octx.fillStyle = INK_COLOR;
+                octx.globalAlpha = 0.2;
+                octx.fillText(ch, 49, 49);
+                octx.globalAlpha = 1.0;
+                octx.fillText(ch, 48, 48);
+                return oc;
+            });
+        }
+
+        update(dt) {
+            this.life -= dt;
+            return this.life > 0;
+        }
+
+        draw(ctx) {
+            if (this.life <= 0) return;
+            const s = canvasScale;
+            const elapsed = this.maxLife - this.life;
+
+            // Overall alpha: fade in first 60 frames, fade out last fadeOutTime frames
+            let alpha = 1;
+            if (elapsed < 60) alpha = elapsed / 60;
+            if (this.life < this.fadeOutTime) alpha = this.life / this.fadeOutTime;
+
+            ctx.save();
+
+            // Semi-transparent backdrop
+            ctx.globalAlpha = alpha * 0.55;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, WORLD_W * s, WORLD_H * s);
+
+            ctx.globalAlpha = alpha;
+
+            // Silk banner background
+            const charSize = 42 * s;
+            const charGap = 6 * s;
+            const totalCharsW = this.charCount * (charSize + charGap) - charGap;
+            const bannerW = Math.min(totalCharsW + 60 * s, (WORLD_W - 40) * s);
+            const bannerH = 160 * s;
+            const bannerX = (WORLD_W * s - bannerW) / 2;
+            const bannerY = (WORLD_H * s - bannerH) / 2 - 20 * s;
+
+            // Banner fill
+            ctx.fillStyle = PARCHMENT_BG;
+            ctx.strokeStyle = '#b8863a';
+            ctx.lineWidth = 2 * s;
+            roundRect(ctx, bannerX, bannerY, bannerW, bannerH, 6 * s);
+            ctx.fill();
+            ctx.stroke();
+
+            // Inner border
+            ctx.strokeStyle = 'rgba(180,100,40,0.25)';
+            ctx.lineWidth = 0.8 * s;
+            roundRect(ctx, bannerX + 6 * s, bannerY + 6 * s, bannerW - 12 * s, bannerH - 12 * s, 3 * s);
+            ctx.stroke();
+
+            // Paper texture on banner
+            ctx.globalAlpha = alpha * 0.04;
+            for (let i = 0; i < 12; i++) {
+                const tx = bannerX + bannerW * (0.05 + Math.sin(i * 3.1) * 0.45 + 0.45);
+                const ty = bannerY + bannerH * (0.1 + Math.cos(i * 2.3) * 0.4 + 0.4);
+                ctx.beginPath();
+                ctx.arc(tx, ty, (4 + i * 1.2) * s, 0, Math.PI * 2);
+                ctx.fillStyle = '#c8a060';
+                ctx.fill();
+            }
+            ctx.globalAlpha = alpha;
+
+            // Milestone label
+            ctx.font = `${Math.round(7 * s)}px ${CJK_FONT}`;
+            ctx.fillStyle = '#b8863a';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${this.milestone} Woerter gelernt`, WORLD_W * s / 2, bannerY + 18 * s);
+
+            // Draw characters sequentially
+            const charsStartX = (WORLD_W * s - totalCharsW) / 2;
+            const charsY = bannerY + 32 * s;
+
+            for (let i = 0; i < this.charCount; i++) {
+                const charElapsed = elapsed - i * this.revealPerChar;
+                if (charElapsed <= 0) continue; // Not yet revealed
+
+                const charProgress = Math.min(1, charElapsed / this.revealPerChar);
+                const cx = charsStartX + i * (charSize + charGap);
+
+                ctx.save();
+
+                // Clip for progressive reveal (top-to-bottom sweep)
+                ctx.beginPath();
+                const revealH = charSize * charProgress;
+                ctx.rect(cx - 2 * s, charsY - 2 * s, charSize + 4 * s, revealH + 4 * s);
+                // Ragged bottom edge
+                for (let j = 0; j < 5; j++) {
+                    const bx = cx + charSize * (j / 4);
+                    const by = charsY + revealH + Math.sin(j * 2.1 + i) * 3 * s;
+                    ctx.moveTo(bx + 3 * s, by);
+                    ctx.arc(bx, by, 3 * s, 0, Math.PI * 2);
+                }
+                ctx.clip();
+
+                // Draw pre-rendered character
+                ctx.globalAlpha = alpha;
+                ctx.drawImage(this.offCanvases[i], cx, charsY, charSize, charSize);
+
+                ctx.restore();
+            }
+
+            // Pinyin (below characters, appears after all revealed)
+            const allRevealed = elapsed > this.charCount * this.revealPerChar;
+            if (allRevealed) {
+                const textAlpha = Math.min(1, (elapsed - this.charCount * this.revealPerChar) / 40);
+                ctx.globalAlpha = alpha * textAlpha;
+                ctx.font = `${Math.round(9 * s)}px ${CJK_FONT}`;
+                ctx.fillStyle = '#5a4530';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.pinyin, WORLD_W * s / 2, bannerY + 88 * s);
+
+                // German translation
+                ctx.font = `${Math.round(8 * s)}px ${CJK_FONT}`;
+                ctx.fillStyle = '#7a6a55';
+                ctx.fillText(this.german, WORLD_W * s / 2, bannerY + 104 * s);
+
+                // Decorative divider
+                ctx.beginPath();
+                ctx.moveTo(bannerX + 30 * s, bannerY + 118 * s);
+                ctx.lineTo(bannerX + bannerW - 30 * s, bannerY + 118 * s);
+                ctx.strokeStyle = 'rgba(180,140,80,0.3)';
+                ctx.lineWidth = 0.5 * s;
+                ctx.stroke();
+
+                // Source attribution
+                ctx.font = `italic ${Math.round(6.5 * s)}px ${CJK_FONT}`;
+                ctx.fillStyle = '#a09080';
+                ctx.fillText('— Chinesisches Sprichwort', WORLD_W * s / 2, bannerY + 132 * s);
+            }
+
+            ctx.restore();
+        }
+    }
+
+    // --- Calligraphy trigger functions ---
+    function triggerCalligraphy(hanzi, pinyin, german) {
+        // Replace any existing overlay (don't stack)
+        calligraphyOverlays = [new CalligraphyOverlay(hanzi, pinyin, german)];
+    }
+
+    function checkProverbMilestone(wordCount) {
+        for (const p of PROVERBS) {
+            if (p.words === wordCount && !proverbMilestonesHit.has(p.words)) {
+                proverbMilestonesHit.add(p.words);
+                proverbOverlay = new ProverbOverlay(p);
+                addLog(`Meilenstein: ${p.chars} — ${p.german}`, 'learn');
+                sfx('learn');
+                break;
+            }
+        }
+    }
+
+    // --- Consolidated learn-word helper ---
+    function learnWord(learner, w) {
+        learner.knownWords.add(w.conceptId);
+        learner.wordHistory.push(w.conceptId);
+        sfx('learn');
+        learnFlashes.push(new LearnFlash(
+            learner.x + randFloat(-10, 10), learner.y - 25,
+            w.hanzi + ' (' + w.pinyin + ')'
+        ));
+        addLog(`${learner.name} lernt: ${w.hanzi} [${w.pinyin}] (${w.de})`, 'learn');
+        triggerCalligraphy(w.hanzi, w.pinyin, w.de);
+        checkProverbMilestone(learner.knownWords.size);
     }
 
     // ============================================================
@@ -4455,12 +4878,8 @@
             for (const w of sentence.words) {
                 if (!learner.knownWords.has(w.conceptId)) {
                     if (Math.random() < learner.learnChance) {
-                        learner.knownWords.add(w.conceptId);
-                        learner.wordHistory.push(w.conceptId);
+                        learnWord(learner, w);
                         newlyLearned.push(w.hanzi);
-                        sfx('learn');
-                        learnFlashes.push(new LearnFlash(learner.x + randFloat(-10,10), learner.y - 25, w.hanzi + ' (' + w.pinyin + ')'));
-                        addLog(`${learner.name} lernt: ${w.hanzi} [${w.pinyin}] (${w.de})`, 'learn');
                     }
                 }
             }
@@ -4590,11 +5009,7 @@
                 for (const w of sentence.words) {
                     if (!learner.knownWords.has(w.conceptId) && vocab[w.conceptId]) {
                         if (Math.random() < learner.learnChance) {
-                            learner.knownWords.add(w.conceptId);
-                            learner.wordHistory.push(w.conceptId);
-                            sfx('learn');
-                            learnFlashes.push(new LearnFlash(learner.x + randFloat(-10,10), learner.y - 25, w.hanzi + ' (' + w.pinyin + ')'));
-                            addLog(`${learner.name} lernt: ${w.hanzi} [${w.pinyin}] (${w.de})`, 'learn');
+                            learnWord(learner, w);
                         }
                     }
                 }
@@ -4727,11 +5142,7 @@
                 for (const w of words) {
                     if (!learner.knownWords.has(w.conceptId)) {
                         if (Math.random() < learner.learnChance * 1.3) {
-                            learner.knownWords.add(w.conceptId);
-                            learner.wordHistory.push(w.conceptId);
-                            sfx('learn');
-                            learnFlashes.push(new LearnFlash(learner.x + randFloat(-10,10), learner.y - 25, w.hanzi + ' (' + w.pinyin + ')'));
-                            addLog(`${learner.name} lernt: ${w.hanzi} [${w.pinyin}] (${w.de})`, 'learn');
+                            learnWord(learner, w);
                         }
                     }
                 }
@@ -5474,11 +5885,7 @@
             for (const w of words) {
                 if (!learner.knownWords.has(w.conceptId)) {
                     if (Math.random() < learner.learnChance) {
-                        learner.knownWords.add(w.conceptId);
-                        learner.wordHistory.push(w.conceptId);
-                        sfx('learn');
-                        learnFlashes.push(new LearnFlash(learner.x + randFloat(-10,10), learner.y - 25, w.hanzi + ' (' + w.pinyin + ')'));
-                        addLog(`${learner.name} lernt: ${w.hanzi} [${w.pinyin}] (${w.de})`, 'learn');
+                        learnWord(learner, w);
                     }
                 }
             }
@@ -6009,11 +6416,7 @@
                     for (const w of words) {
                         if (!learner.knownWords.has(w.conceptId)) {
                             if (Math.random() < learner.learnChance) {
-                                learner.knownWords.add(w.conceptId);
-                                learner.wordHistory.push(w.conceptId);
-                                sfx('learn');
-                                learnFlashes.push(new LearnFlash(learner.x + randFloat(-10,10), learner.y - 25, w.hanzi + ' (' + w.pinyin + ')'));
-                                addLog(`${learner.name} lernt: ${w.hanzi} [${w.pinyin}] (${w.de})`, 'learn');
+                                learnWord(learner, w);
                             }
                         }
                     }
@@ -6672,8 +7075,10 @@
             // Update speech bubbles
             speechBubbles = speechBubbles.filter(b => b.update(dt));
 
-            // Update learn flashes
+            // Update learn flashes and calligraphy overlays
             learnFlashes = learnFlashes.filter(f => f.update(dt));
+            calligraphyOverlays = calligraphyOverlays.filter(c => c.update(dt));
+            if (proverbOverlay && !proverbOverlay.update(dt)) proverbOverlay = null;
 
             // Update weather
             updateWeather(dt);
@@ -6716,6 +7121,10 @@
 
         // Weather effects (on top of scene)
         drawWeatherEffects(ctx);
+
+        // Calligraphy overlays (on top of weather/scene)
+        for (const c of calligraphyOverlays) c.draw(ctx);
+        if (proverbOverlay) proverbOverlay.draw(ctx);
 
         // Object tooltip (UI layer, always visible)
         drawObjectTooltip(ctx);
