@@ -2091,9 +2091,9 @@
         { id: 'fish_pond1', type: 'fish_pond',   x: 180, y: 520, w: 45, h: 35, label: '鱼塘' },
         { id: 'shrine1',    type: 'shrine',      x: 150, y: 450, w: 40, h: 50, label: '神龛' },
         { id: 'lantern1',   type: 'lantern_post',x: 440, y: 180, w: 15, h: 35, label: '灯' },
-        { id: 'rice1',      type: 'rice_paddy',  x: 620, y: 160, w: 65, h: 45, label: '稻田' },
+        { id: 'rice1',      type: 'rice_paddy',  x: 560, y: 560, w: 60, h: 45, label: '稻田' },
         { id: 'river1',     type: 'river',       x: 420, y: 560, w: 70, h: 50, label: '河' },
-        { id: 'dock1',      type: 'dock',        x: 660, y: 530, w: 40, h: 30, label: '码头' },
+        { id: 'dock1',      type: 'dock',        x: 720, y: 530, w: 40, h: 30, label: '码头' },
         { id: 'lotus1',     type: 'lotus_pond',  x: 120, y: 530, w: 50, h: 35, label: '莲池' },
         { id: 'flower1',    type: 'flower',      x: 200, y: 380, w: 30, h: 30, label: '花' },
         { id: 'tree1',      type: 'willow',      x: 650, y: 350, w: 45, h: 65, label: '柳树' },
@@ -3843,51 +3843,52 @@
             }
 
             case 'bridge': {
-                // Arched stone bridge over water
-                // Water underneath
-                ctx.fillStyle = '#2a5a8a';
-                ctx.fillRect(x - w/2 - 4*canvasScale, y + 2*canvasScale, w + 8*canvasScale, h/4);
-                // Ripples on water
-                const bwt = gameTick * 0.03;
-                ctx.strokeStyle = 'rgba(100,180,220,0.3)';
-                ctx.lineWidth = canvasScale;
-                for (let i = 0; i < 3; i++) {
+                // Wooden bridge over river
+                const bw = w, bh = h;
+                const s2 = canvasScale;
+                // Wooden deck (main surface, above water)
+                ctx.fillStyle = '#8a6a3a';
+                ctx.fillRect(x - bw/2, y - bh/3, bw, bh * 0.6);
+                // Plank lines
+                ctx.strokeStyle = '#6a4a2a';
+                ctx.lineWidth = s2 * 0.5;
+                const plankCount = 8;
+                for (let i = 1; i < plankCount; i++) {
+                    const px = x - bw/2 + i * bw / plankCount;
                     ctx.beginPath();
-                    const rx = x - w/4 + i * w/4 + Math.sin(bwt + i)*3*canvasScale;
-                    ctx.ellipse(rx, y + 4*canvasScale, 5*canvasScale, 1.5*canvasScale, 0, 0, Math.PI*2);
+                    ctx.moveTo(px, y - bh/3);
+                    ctx.lineTo(px, y - bh/3 + bh * 0.6);
                     ctx.stroke();
                 }
-                // Stone arch
-                ctx.fillStyle = '#8a8a7a';
-                ctx.beginPath();
-                ctx.moveTo(x - w/2, y + h/4 + 2*canvasScale);
-                ctx.lineTo(x - w/2, y + 2*canvasScale);
-                ctx.quadraticCurveTo(x, y - h/2, x + w/2, y + 2*canvasScale);
-                ctx.lineTo(x + w/2, y + h/4 + 2*canvasScale);
-                ctx.lineTo(x + w/2 - 4*canvasScale, y + h/4 + 2*canvasScale);
-                ctx.lineTo(x + w/2 - 4*canvasScale, y + 4*canvasScale);
-                ctx.quadraticCurveTo(x, y - h/2 + 6*canvasScale, x - w/2 + 4*canvasScale, y + 4*canvasScale);
-                ctx.lineTo(x - w/2 + 4*canvasScale, y + h/4 + 2*canvasScale);
-                ctx.closePath();
-                ctx.fill();
-                // Stone lines
-                ctx.strokeStyle = '#6a6a5a';
-                ctx.lineWidth = canvasScale * 0.6;
-                for (let i = 0; i < 5; i++) {
-                    const bx = x - w/2 + 4*canvasScale + i * (w - 8*canvasScale)/4;
-                    ctx.beginPath();
-                    ctx.moveTo(bx, y + h/4 + 2*canvasScale);
-                    const archY = y + 2*canvasScale - Math.sin((i/4) * Math.PI) * (h/2 - 4*canvasScale);
-                    ctx.lineTo(bx, archY);
-                    ctx.stroke();
-                }
+                // Support posts (visible below deck)
+                ctx.fillStyle = '#6a4a20';
+                const postW = 4 * s2;
+                ctx.fillRect(x - bw/3 - postW/2, y - bh/3 + bh*0.5, postW, bh * 0.45);
+                ctx.fillRect(x + bw/3 - postW/2, y - bh/3 + bh*0.5, postW, bh * 0.45);
+                ctx.fillRect(x - postW/2, y - bh/3 + bh*0.5, postW, bh * 0.45);
                 // Railings
-                ctx.strokeStyle = '#7a7a6a';
-                ctx.lineWidth = 2*canvasScale;
+                ctx.strokeStyle = '#7a5a2a';
+                ctx.lineWidth = 2 * s2;
                 ctx.beginPath();
-                ctx.moveTo(x - w/2, y - 2*canvasScale);
-                ctx.quadraticCurveTo(x, y - h/2 - 6*canvasScale, x + w/2, y - 2*canvasScale);
+                ctx.moveTo(x - bw/2, y - bh/3 - 2*s2);
+                ctx.lineTo(x + bw/2, y - bh/3 - 2*s2);
                 ctx.stroke();
+                ctx.moveTo(x - bw/2, y - bh/3 + bh*0.6 + 2*s2);
+                ctx.lineTo(x + bw/2, y - bh/3 + bh*0.6 + 2*s2);
+                ctx.stroke();
+                // Railing posts
+                ctx.lineWidth = 1.5 * s2;
+                for (let i = 0; i <= 4; i++) {
+                    const rpx = x - bw/2 + i * bw/4;
+                    ctx.beginPath();
+                    ctx.moveTo(rpx, y - bh/3 - 3*s2);
+                    ctx.lineTo(rpx, y - bh/3);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(rpx, y - bh/3 + bh*0.6);
+                    ctx.lineTo(rpx, y - bh/3 + bh*0.6 + 3*s2);
+                    ctx.stroke();
+                }
                 break;
             }
 
