@@ -5125,6 +5125,7 @@
             // High curiosity speakers move toward discoveries
             if (d < noticeRange * 2 && speaker.neugier >= 6 && Math.random() < 0.001 * dt) {
                 speaker.state = 'moving';
+                speaker.currentAction = { id: 'investigate', duration: 200, templates: [['look','this','here']], effects: {}, activityDe: 'Untersucht etwas...', priority: 'idle' };
                 speaker.targetX = disc.x + randFloat(-10, 10);
                 speaker.targetY = disc.y + randFloat(-10, 10);
                 speaker.activityDe = 'Untersucht etwas...';
