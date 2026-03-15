@@ -251,14 +251,14 @@
         }
         .vocab-word {
             display: flex;
-            justify-content: space-between;
             padding: 6px 4px;
             font-size: 12px;
             border-bottom: 1px solid #1a1612;
             line-height: 1.4;
         }
-        .vocab-word .pseudo { color: #d4a030; }
-        .vocab-word .meaning { color: #6a8a5a; }
+        .vocab-word .pseudo { color: #d4a030; width: 42px; flex-shrink: 0; }
+        .vocab-word .pinyin { color: #a09070; font-size: 10px; width: 70px; flex-shrink: 0; text-align: center; }
+        .vocab-word .meaning { color: #6a8a5a; flex: 1; text-align: right; }
         .vocab-word.new { animation: flashGreen 1s; }
         @keyframes flashGreen {
             0% { background: #2a4a2a; }
@@ -5656,7 +5656,7 @@
         for (const cid of learner.wordHistory) {
             const v = vocab[cid];
             if (v) {
-                html += `<div class="vocab-word" data-cid="${cid}" style="cursor:pointer;" title="Klicken für Kalligraphie"><span class="pseudo">${v.hanzi}</span><span style="color:#a09070;font-size:10px;">${v.pinyin}</span><span class="meaning">${v.de}</span></div>`;
+                html += `<div class="vocab-word" data-cid="${cid}" style="cursor:pointer;" title="Klicken für Kalligraphie"><span class="pseudo">${v.hanzi}</span><span class="pinyin">${v.pinyin}</span><span class="meaning">${v.de}</span></div>`;
             }
         }
         if (known === 0) {
