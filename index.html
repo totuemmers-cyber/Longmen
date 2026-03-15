@@ -375,7 +375,7 @@
 
     // Start audio on first user interaction (autoplay policy)
     ['click','touchstart','keydown'].forEach(evt => {
-        document.addEventListener(evt, resumeAudio, { once: false, passive: true });
+        document.addEventListener(evt, resumeAudio, { once: true, passive: true });
     });
 
     function toggleSound() {
@@ -387,12 +387,17 @@
         if (soundEnabled) resumeAudio();
     }
 
-    // --- Utility: create noise buffer ---
+    // --- Utility: create noise buffer (cached by duration) ---
+    const _noiseBufferCache = {};
     function createNoiseBuffer(duration) {
+        // Round to nearest 0.01s to maximize cache hits
+        const key = Math.round(duration * 100);
+        if (_noiseBufferCache[key]) return _noiseBufferCache[key];
         const len = audioCtx.sampleRate * duration;
         const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+        _noiseBufferCache[key] = buf;
         return buf;
     }
 
@@ -1843,7 +1848,7 @@
         { id: 'song',      hanzi: '歌',   pinyin: 'gē',        de: 'Lied',        type: 'noun' },
         { id: 'story',     hanzi: '故事', pinyin: 'gùshi',     de: 'Geschichte',  type: 'noun' },
         { id: 'thing',     hanzi: '东西', pinyin: 'dōngxi',    de: 'Ding',        type: 'noun' },
-        { id: 'day',       hanzi: '天',   pinyin: 'tiān',      de: 'Tag',         type: 'noun' },
+        { id: 'day',       hanzi: '日',   pinyin: 'rì',        de: 'Tag',         type: 'noun' },
         { id: 'night',     hanzi: '晚上', pinyin: 'wǎnshang',  de: 'Nacht',       type: 'noun' },
         { id: 'morning',   hanzi: '早上', pinyin: 'zǎoshang',  de: 'Morgen',      type: 'noun' },
         // Setting-specific nouns (HSK 3+ only where needed)
@@ -2149,8 +2154,7 @@
     // Check if a point is inside any building (for avoidance)
     const BUILDING_TYPES = ['house', 'teahouse', 'kitchen', 'workshop', 'market', 'pagoda', 'shrine', 'gate'];
     function isInsideBuilding(x, y, excludeType) {
-        for (const obj of worldObjects) {
-            if (!BUILDING_TYPES.includes(obj.type)) continue;
+        for (const obj of cachedBuildingObjects) {
             if (excludeType && obj.type === excludeType) continue;
             const hw = obj.w / 2, hh = obj.h / 2;
             if (x > obj.x - hw && x < obj.x + hw && y > obj.y - hh && y < obj.y + hh) {
@@ -2734,6 +2738,8 @@
     let vocab = {};
     let persons = [];
     let worldObjects = [];
+    let cachedTeahouse = null;
+    let cachedBuildingObjects = [];
     let speechBubbles = [];
     let eventLog = [];
     let learnFlashes = [];
@@ -5140,18 +5146,11 @@
         const learner = persons[1];
         const speaker = persons[0];
 
-        // Check if learner can see the relevant objects/actions
-        const canSee = true; // Simplified: if in hearing range, can also see
-
-        if (canSee) {
-            // Try to learn each word
-            let newlyLearned = [];
-            for (const w of sentence.words) {
-                if (!learner.knownWords.has(w.conceptId)) {
-                    if (Math.random() < learner.learnChance) {
-                        learnWord(learner, w);
-                        newlyLearned.push(w.hanzi);
-                    }
+        // Try to learn each word (in hearing range = can also observe)
+        for (const w of sentence.words) {
+            if (!learner.knownWords.has(w.conceptId)) {
+                if (Math.random() < learner.learnChance) {
+                    learnWord(learner, w);
                 }
             }
         }
@@ -5198,7 +5197,7 @@
         const speaker = persons[0];
         if (speaker.state !== 'idle') return false;
         if (speaker.actionHistory.length < 3) return false;
-        const fire = worldObjects.find(o => o.type === 'teahouse');
+        const fire = cachedTeahouse;
         if (!fire) return false;
         if (speaker.distTo(fire.x, fire.y) > 80) return false;
         return true;
@@ -5240,7 +5239,7 @@
         addLog(`${speaker.name} beginnt eine Geschichte am Feuer...`, 'speak');
 
         // Make nearby NPCs face the teahouse
-        const fire = worldObjects.find(o => o.type === 'teahouse');
+        const fire = cachedTeahouse;
         if (fire) {
             for (const npc of npcs) {
                 if (npc.distTo(fire.x, fire.y) < 100) {
@@ -5550,11 +5549,11 @@
                     ctx.moveTo(x + 1*s, y - 1*s); ctx.lineTo(x + 4*s, y - 7*s);
                     ctx.stroke();
                     // Flower heads
-                    const flowerColors = ['#e06080', '#e0a040', '#d060d0'];
+                    const discFlowerColors = ['#e06080', '#e0a040', '#d060d0'];
                     for (let i = 0; i < 3; i++) {
                         const fx = [x - 3*s, x + 1*s, x + 4*s][i];
                         const fy = [y - 8*s, y - 10*s, y - 7*s][i];
-                        ctx.fillStyle = flowerColors[i];
+                        ctx.fillStyle = discFlowerColors[i];
                         ctx.beginPath();
                         ctx.arc(fx, fy, 2*s, 0, Math.PI*2);
                         ctx.fill();
@@ -5668,6 +5667,7 @@
 
         // --- Freeze (stunned from wrong quiz answer) ---
         if (learnerFreezeTimer > 0) {
+            learnerFreezeTimer -= dt;
             learner.activityDe = 'Verwirrt...';
             return; // Skip all AI while frozen
         }
@@ -5830,11 +5830,17 @@
     // ============================================================
     //  UI PANEL
     // ============================================================
+    const _panelFingerprints = {};
     function renderCharPanel(panelId, person) {
         const el = document.getElementById(panelId);
         const isLearner = person.role === 'learner';
         const roleLabel = isLearner ? 'Reisender' : 'Einheimischer';
         const portraitBg = person.color;
+
+        // Skip DOM update if nothing changed
+        const fp = `${person.geschick}|${person.neugier}|${person.geselligkeit}|${person.wahrnehmung}|${Math.round(person.hunger)}|${Math.round(person.thirst)}|${Math.round(person.energy)}|${person.activityDe}`;
+        if (_panelFingerprints[panelId] === fp) return;
+        _panelFingerprints[panelId] = fp;
 
         const statColor = v => v >= 7 ? '#6a8a5a' : v >= 4 ? '#a0a060' : '#a05a4a';
         const needColor = v => v >= 50 ? '#6a8a5a' : v >= 25 ? '#a0a060' : '#a05a4a';
@@ -5976,6 +5982,7 @@
             this.chatPartner = null;
             this.currentAction = null;
             this.activityDe = 'Untätig';
+            this.role = 'npc';
 
             // Appearance
             const skinTones = ['#e8c8a0','#d4b088','#e0c098','#dab890','#e8d0a8','#d0a880'];
@@ -6024,16 +6031,15 @@
             this.stuckTimer += dt;
             if (this.stuckTimer > 30) {
                 this.stuckTimer = 0;
-                this.lastMoveX = this.x;
-                this.lastMoveY = this.y;
                 if (movedDist < 5) {
                     if (this.waypoints && this.waypoints.length > 0) {
                         this.waypoints.shift();
                     } else {
                         return true;
                     }
-                    return false;
                 }
+                this.lastMoveX = this.x;
+                this.lastMoveY = this.y;
             }
             const spd = this.speed * dt * 0.35;
             const step = Math.min(spd, dist);
@@ -6267,7 +6273,6 @@
                     ctx.ellipse(0, 0, 8*s, 5*s, 0, 0, Math.PI*2);
                     ctx.fill();
                     // Long neck
-                    const neckAngle = Math.sin(t * 1.5) * 0.1;
                     ctx.strokeStyle = '#f0ece0';
                     ctx.lineWidth = 3*s;
                     ctx.beginPath();
@@ -6635,7 +6640,7 @@
     // ============================================================
     function updateRelationships(dt) {
         const allChars = [...persons, ...npcs];
-        const fire = worldObjects.find(o => o.type === 'teahouse');
+        const fire = cachedTeahouse;
 
         // Near-teahouse bonding: characters near the same fire grow closer
         if (fire) {
@@ -7309,6 +7314,10 @@
 
         // Create world objects
         worldObjects = OBJECT_DEFS.map(d => ({ ...d }));
+
+        // Cache frequently-looked-up objects
+        cachedTeahouse = cachedTeahouse || null;
+        cachedBuildingObjects = worldObjects.filter(o => BUILDING_TYPES.includes(o.type));
 
         // Create persons
         const speakerPool = [...SPEAKER_NAMES];
