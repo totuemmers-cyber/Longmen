@@ -3738,18 +3738,22 @@
                 ctx.moveTo(x - w/2 - 6*canvasScale, y - h/3 - 4*canvasScale);
                 ctx.quadraticCurveTo(x, y - h/2 - 12*canvasScale, x + w/2 + 6*canvasScale, y - h/3 - 4*canvasScale);
                 ctx.fill();
-                // Steam wisps (animated)
-                const st = gameTick * 0.04;
-                ctx.strokeStyle = 'rgba(220,220,220,0.3)';
-                ctx.lineWidth = canvasScale * 1.2;
+                // Steam wisps rising from teahouse (animated)
+                const st = gameTick * 0.03;
                 for (let i = 0; i < 3; i++) {
-                    const sx = x - 6*canvasScale + i * 6*canvasScale;
-                    const sOff = Math.sin(st + i * 2) * 3 * canvasScale;
+                    const sx = x + (i - 1) * 5 * canvasScale;
+                    const rise = (st + i * 2.5) % 6;
+                    const fadeAlpha = rise < 1 ? rise * 0.25 : Math.max(0, 0.25 - (rise - 1) * 0.06);
+                    if (fadeAlpha <= 0) continue;
+                    ctx.globalAlpha = fadeAlpha;
+                    ctx.fillStyle = '#e8e4e0';
+                    const wy = y - h/3 - (6 + rise * 5) * canvasScale;
+                    const wobble = Math.sin(st * 2 + i * 1.8) * 3 * canvasScale;
                     ctx.beginPath();
-                    ctx.moveTo(sx, y - h/3 - 6*canvasScale);
-                    ctx.quadraticCurveTo(sx + sOff, y - h/2 - 10*canvasScale, sx - sOff, y - h/2 - 18*canvasScale);
-                    ctx.stroke();
+                    ctx.ellipse(sx + wobble, wy, (2.5 + rise * 0.4) * canvasScale, (1.5 + rise * 0.3) * canvasScale, 0, 0, Math.PI * 2);
+                    ctx.fill();
                 }
+                ctx.globalAlpha = 1.0;
                 break;
             }
 
