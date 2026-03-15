@@ -4171,26 +4171,38 @@
                     ctx.lineTo(x+(px+3)*canvasScale, y+(py-2)*canvasScale);
                     ctx.stroke();
                 }
-                // Koi fish
-                const koiColors = ['#e86030','#e8c040','#e0e0e0'];
+                // Koi fish (natural lazy swimming)
+                const koiColors = ['#e86030','#e8c040'];
                 for (let i = 0; i < 2; i++) {
-                    const kx = x + Math.cos(fpt*0.7 + i*3) * w/4;
-                    const ky = y + Math.sin(fpt*0.7 + i*3) * h/4;
-                    const kAngle = fpt*0.7 + i*3 + Math.PI/2;
+                    // Figure-8 with varying speed and drift
+                    const t1 = fpt * (0.35 + i * 0.12);
+                    const t2 = fpt * (0.23 + i * 0.09);
+                    const kx = x + Math.cos(t1 + i * 2.1) * w * 0.28
+                              + Math.sin(t2 * 0.7 + i) * w * 0.08;
+                    const ky = y + Math.sin(t1 * 0.8 + i * 1.7) * h * 0.25
+                              + Math.cos(t2 * 0.5 + i * 0.9) * h * 0.06;
+                    // Facing direction from movement delta
+                    const prevX = x + Math.cos((t1 - 0.05) + i * 2.1) * w * 0.28
+                                + Math.sin(((t2 - 0.05) * 0.7) + i) * w * 0.08;
+                    const prevY = y + Math.sin(((t1 - 0.05) * 0.8) + i * 1.7) * h * 0.25
+                                + Math.cos(((t2 - 0.05) * 0.5) + i * 0.9) * h * 0.06;
+                    const kAngle = Math.atan2(ky - prevY, kx - prevX);
                     ctx.save();
                     ctx.translate(kx, ky);
-                    ctx.rotate(kAngle);
+                    ctx.rotate(kAngle + Math.PI / 2);
                     ctx.fillStyle = koiColors[i];
+                    // Body
                     ctx.beginPath();
                     ctx.moveTo(0, -4*canvasScale);
                     ctx.quadraticCurveTo(3*canvasScale, 0, 0, 4*canvasScale);
                     ctx.quadraticCurveTo(-2*canvasScale, 0, 0, -4*canvasScale);
                     ctx.fill();
-                    // Tail
+                    // Tail (wags)
+                    const tailWag = Math.sin(fpt * 3 + i * 2) * 1.5 * canvasScale;
                     ctx.beginPath();
                     ctx.moveTo(0, 3*canvasScale);
-                    ctx.lineTo(-2*canvasScale, 5*canvasScale);
-                    ctx.lineTo(2*canvasScale, 5*canvasScale);
+                    ctx.lineTo(-2*canvasScale + tailWag, 6*canvasScale);
+                    ctx.lineTo(2*canvasScale + tailWag, 6*canvasScale);
                     ctx.closePath();
                     ctx.fill();
                     ctx.restore();
