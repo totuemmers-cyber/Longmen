@@ -2160,12 +2160,133 @@
         return null;
     }
 
-    // Set target with automatic river-crossing waypoints
+    // Check if a position is blocked (river without bridge, or building)
+    function isBlocked(x, y, targetType) {
+        // River check (allow on bridge)
+        if (isInRiver(x) && Math.abs(y - BRIDGE.y) > BRIDGE.halfH + 8) {
+            return true;
+        }
+        // Building check
+        if (isInsideBuilding(x, y, targetType)) {
+            return true;
+        }
+        return false;
+    }
+
+    // Steer around obstacles: try original direction, then alternate angles
+    // Returns {dx, dy} of the best movement direction, or null if stuck
+    function steerAroundObstacles(x, y, dirX, dirY, step, targetType) {
+        // Try original direction first
+        const nx = x + dirX * step;
+        const ny = y + dirY * step;
+        if (!isBlocked(nx, ny, targetType)) {
+            return { dx: dirX, dy: dirY };
+        }
+        // Try increasingly wider angles (±30°, ±60°, ±90°, ±120°)
+        const baseAngle = Math.atan2(dirY, dirX);
+        const offsets = [0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.0, -2.0]; // radians (~30° steps)
+        for (const off of offsets) {
+            const angle = baseAngle + off;
+            const sdx = Math.cos(angle);
+            const sdy = Math.sin(angle);
+            if (!isBlocked(x + sdx * step, y + sdy * step, targetType)) {
+                return { dx: sdx, dy: sdy };
+            }
+        }
+        return null; // fully stuck
+    }
+
+    // Check if a line segment from (x1,y1) to (x2,y2) intersects a rectangle
+    function lineIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh) {
+        const hw = rw / 2 + 8, hh = rh / 2 + 8; // margin
+        const left = rx - hw, right = rx + hw, top = ry - hh, bot = ry + hh;
+        // Liang-Barsky clipping
+        const dx = x2 - x1, dy = y2 - y1;
+        let tMin = 0, tMax = 1;
+        const edges = [
+            { p: -dx, q: x1 - left },
+            { p: dx,  q: right - x1 },
+            { p: -dy, q: y1 - top },
+            { p: dy,  q: bot - y1 },
+        ];
+        for (const { p, q } of edges) {
+            if (Math.abs(p) < 0.001) {
+                if (q < 0) return false;
+            } else {
+                const t = q / p;
+                if (p < 0) { if (t > tMin) tMin = t; }
+                else       { if (t < tMax) tMax = t; }
+                if (tMin > tMax) return false;
+            }
+        }
+        return true;
+    }
+
+    // Plan waypoints around buildings that lie in the path
+    function planBuildingWaypoints(fromX, fromY, toX, toY, targetType) {
+        const waypoints = [];
+        for (const obj of worldObjects) {
+            if (!BUILDING_TYPES.includes(obj.type)) continue;
+            if (targetType && obj.type === targetType) continue;
+            if (!lineIntersectsRect(fromX, fromY, toX, toY, obj.x, obj.y, obj.w, obj.h)) continue;
+            // Route around this building - pick the corner closest to the straight line
+            const hw = obj.w / 2 + 12, hh = obj.h / 2 + 12;
+            const corners = [
+                { x: obj.x - hw, y: obj.y - hh },
+                { x: obj.x + hw, y: obj.y - hh },
+                { x: obj.x - hw, y: obj.y + hh },
+                { x: obj.x + hw, y: obj.y + hh },
+            ];
+            // Pick the corner that results in shortest total detour
+            let bestCorner = null, bestDist = Infinity;
+            for (const c of corners) {
+                const d = Math.sqrt((fromX - c.x) ** 2 + (fromY - c.y) ** 2)
+                        + Math.sqrt((toX - c.x) ** 2 + (toY - c.y) ** 2);
+                if (d < bestDist) { bestDist = d; bestCorner = c; }
+            }
+            if (bestCorner) {
+                waypoints.push({ x: bestCorner.x, y: bestCorner.y, _dist: Math.sqrt((fromX - bestCorner.x) ** 2 + (fromY - bestCorner.y) ** 2) });
+            }
+        }
+        // Sort by distance from start
+        waypoints.sort((a, b) => a._dist - b._dist);
+        return waypoints;
+    }
+
+    // Set target with automatic river-crossing and building-avoidance waypoints
     function setTargetWithPath(character, tx, ty) {
         character.targetX = tx;
         character.targetY = ty;
-        const wp = planWaypoints(character.x, character.y, tx, ty);
-        character.waypoints = wp || [];
+        // Determine what type of building the character is going to (so we don't avoid it)
+        let targetType = null;
+        if (character.currentAction) {
+            const act = ACTION_DEFS.find(a => a.id === character.currentAction.id);
+            if (act) targetType = act.target;
+            if (character.currentAction.target && typeof character.currentAction.target === 'string') {
+                targetType = character.currentAction.target;
+            }
+        }
+        // River waypoints
+        const riverWP = planWaypoints(character.x, character.y, tx, ty);
+        // Building waypoints for non-river segments
+        const buildingWP = planBuildingWaypoints(character.x, character.y, tx, ty, targetType);
+        // Merge: building waypoints first (sorted by distance), then river waypoints
+        const allWP = [];
+        if (riverWP) {
+            // Insert building waypoints that come before the first river waypoint
+            const riverStartDist = Math.sqrt((character.x - riverWP[0].x) ** 2 + (character.y - riverWP[0].y) ** 2);
+            for (const bw of buildingWP) {
+                if (bw._dist < riverStartDist) allWP.push(bw);
+            }
+            allWP.push(...riverWP);
+            // Insert building waypoints after river crossing
+            for (const bw of planBuildingWaypoints(riverWP[riverWP.length - 1].x, riverWP[riverWP.length - 1].y, tx, ty, targetType)) {
+                allWP.push(bw);
+            }
+        } else {
+            allWP.push(...buildingWP);
+        }
+        character.waypoints = allWP;
     }
 
     // Ensure NPCs don't spawn inside the river
@@ -3051,14 +3172,24 @@
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
                 this.waypoints.shift();
-                return false; // reached waypoint, continue to next
+                return false;
             }
             if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) return true;
             const spd = this.moveSpeed * dt * 0.4;
             const step = Math.min(spd, dist);
-            this.x += (dx / dist) * step;
-            this.y += (dy / dist) * step;
-            this.facing = Math.atan2(dy, dx);
+            const dirX = dx / dist, dirY = dy / dist;
+            // Determine target type for building avoidance
+            let tType = null;
+            if (this.currentAction) {
+                if (this.currentAction.target && typeof this.currentAction.target === 'string') tType = this.currentAction.target;
+                else { const a = ACTION_DEFS.find(a => a.id === this.currentAction.id); if (a) tType = a.target; }
+            }
+            const steer = steerAroundObstacles(this.x, this.y, dirX, dirY, step, tType);
+            if (steer) {
+                this.x += steer.dx * step;
+                this.y += steer.dy * step;
+                this.facing = Math.atan2(steer.dy, steer.dx);
+            }
             return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
         }
     }
@@ -5853,9 +5984,13 @@
             if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) return true;
             const spd = this.speed * dt * 0.35;
             const step = Math.min(spd, dist);
-            this.x += (dx / dist) * step;
-            this.y += (dy / dist) * step;
-            this.facing = Math.atan2(dy, dx);
+            const dirX = dx / dist, dirY = dy / dist;
+            const steer = steerAroundObstacles(this.x, this.y, dirX, dirY, step, null);
+            if (steer) {
+                this.x += steer.dx * step;
+                this.y += steer.dy * step;
+                this.facing = Math.atan2(steer.dy, steer.dx);
+            }
             return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
         }
     }
@@ -7219,41 +7354,13 @@
             // Update NPCs
             updateNPCs(dt);
 
-            // Push characters out of buildings they're not targeting
+            // Soft safety net: gently nudge characters out if stuck inside obstacles
             const allMovers = [...persons, ...npcs];
             for (const c of allMovers) {
-                // Determine which building type this character is targeting
-                let targetType = null;
-                if (c.currentAction && c.currentAction.target) {
-                    targetType = c.currentAction.target;
-                } else if (c.currentAction && c.currentAction.id) {
-                    // infer from action id
-                    const act = ACTION_DEFS.find(a => a.id === c.currentAction.id);
-                    if (act) targetType = act.target;
-                }
-                const bldg = isInsideBuilding(c.x, c.y, targetType);
-                if (bldg) {
-                    // Push toward nearest edge
-                    const dx = c.x - bldg.x;
-                    const dy = c.y - bldg.y;
-                    const hw = bldg.w / 2 + 3, hh = bldg.h / 2 + 3;
-                    // Find which edge is closest
-                    const dLeft = Math.abs(c.x - (bldg.x - hw));
-                    const dRight = Math.abs(c.x - (bldg.x + hw));
-                    const dTop = Math.abs(c.y - (bldg.y - hh));
-                    const dBot = Math.abs(c.y - (bldg.y + hh));
-                    const minD = Math.min(dLeft, dRight, dTop, dBot);
-                    if (minD === dLeft) c.x = bldg.x - hw;
-                    else if (minD === dRight) c.x = bldg.x + hw;
-                    else if (minD === dTop) c.y = bldg.y - hh;
-                    else c.y = bldg.y + hh;
-                }
-                // Also push out of river (except on bridge)
-                if (isInRiver(c.x)) {
-                    const onBridge = Math.abs(c.y - BRIDGE.y) < BRIDGE.halfH + 5;
-                    if (!onBridge) {
-                        c.x = c.x < BRIDGE.x ? RIVER_LEFT - 2 : RIVER_RIGHT + 2;
-                    }
+                // River: gentle push toward nearest bank (not instant teleport)
+                if (isInRiver(c.x) && Math.abs(c.y - BRIDGE.y) > BRIDGE.halfH + 8) {
+                    const pushDir = c.x < BRIDGE.x ? -1 : 1;
+                    c.x += pushDir * 0.8 * dt;
                 }
             }
 
