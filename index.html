@@ -3561,38 +3561,28 @@
             ctx.fill();
         }
 
-        // Golden-tan courtyard area (center, organic shape)
+        // Golden-tan courtyard area (center, slightly irregular ellipse)
+        ctx.beginPath();
+        ctx.ellipse(420 * s, 300 * s, 180 * s, 120 * s, -0.06, 0, Math.PI * 2);
         ctx.fillStyle = '#c8b080';
-        ctx.beginPath();
-        ctx.moveTo(250 * s, 270 * s);
-        ctx.bezierCurveTo(280 * s, 180 * s, 520 * s, 170 * s, 590 * s, 240 * s);
-        ctx.bezierCurveTo(630 * s, 290 * s, 620 * s, 380 * s, 570 * s, 410 * s);
-        ctx.bezierCurveTo(500 * s, 450 * s, 320 * s, 440 * s, 260 * s, 390 * s);
-        ctx.bezierCurveTo(220 * s, 350 * s, 230 * s, 310 * s, 250 * s, 270 * s);
         ctx.fill();
-        ctx.fillStyle = '#baa870';
         ctx.beginPath();
-        ctx.moveTo(270 * s, 280 * s);
-        ctx.bezierCurveTo(295 * s, 200 * s, 505 * s, 190 * s, 570 * s, 250 * s);
-        ctx.bezierCurveTo(605 * s, 295 * s, 600 * s, 370 * s, 555 * s, 400 * s);
-        ctx.bezierCurveTo(495 * s, 435 * s, 335 * s, 425 * s, 280 * s, 380 * s);
-        ctx.bezierCurveTo(245 * s, 345 * s, 250 * s, 315 * s, 270 * s, 280 * s);
+        ctx.ellipse(418 * s, 302 * s, 160 * s, 105 * s, 0.04, 0, Math.PI * 2);
+        ctx.fillStyle = '#baa870';
         ctx.fill();
 
-        // Organic stone paths (curved with irregular edges)
+        // Stone paths (slightly curved for organic feel)
         const paths = [
-            // Main east-west path (strong S-curve)
-            { pts: [{x:170,y:320},{x:240,y:280},{x:320,y:310},{x:420,y:270},{x:510,y:310},{x:580,y:280},{x:660,y:300}], w: 18 },
-            // North-south path (winding meander)
-            { pts: [{x:400,y:130},{x:430,y:190},{x:410,y:250},{x:440,y:310},{x:415,y:370},{x:435,y:430},{x:420,y:500}], w: 16 },
-            // Diagonal path (sweeping curve)
-            { pts: [{x:260,y:190},{x:310,y:230},{x:370,y:280},{x:420,y:320},{x:490,y:350},{x:550,y:400}], w: 14 },
-            // Small garden path (strongly winding)
-            { pts: [{x:140,y:380},{x:180,y:350},{x:230,y:360},{x:270,y:330},{x:320,y:310}], w: 10 },
-            // Path to river (gentle curve)
-            { pts: [{x:570,y:290},{x:610,y:270},{x:650,y:280},{x:690,y:300}], w: 12 },
-            // Northern shortcut
-            { pts: [{x:300,y:180},{x:340,y:165},{x:390,y:155},{x:430,y:165}], w: 9 },
+            // Main east-west path (gentle S-curve)
+            { pts: [{x:190,y:305},{x:300,y:293},{x:420,y:302},{x:540,y:295},{x:650,y:300}], w: 18 },
+            // North-south path (slight meander)
+            { pts: [{x:415,y:145},{x:422,y:230},{x:418,y:310},{x:424,y:390},{x:420,y:480}], w: 16 },
+            // Diagonal path (mild curve)
+            { pts: [{x:275,y:198},{x:350,y:255},{x:420,y:300},{x:500,y:355},{x:560,y:400}], w: 14 },
+            // Small garden path
+            { pts: [{x:150,y:370},{x:210,y:348},{x:275,y:330},{x:320,y:312}], w: 10 },
+            // Path to river
+            { pts: [{x:575,y:298},{x:625,y:288},{x:670,y:290},{x:700,y:298}], w: 12 },
         ];
 
         for (const p of paths) {
@@ -3689,30 +3679,26 @@
             }
         }
 
-        // River on right side (organic meandering banks)
+        // River on right side (gentle meander)
         ctx.fillStyle = '#3a6a8a';
         ctx.beginPath();
-        // Left bank (meanders)
-        ctx.moveTo(730 * s, 0);
-        ctx.bezierCurveTo(715 * s, 80 * s, 725 * s, 160 * s, 710 * s, 240 * s);
-        ctx.bezierCurveTo(700 * s, 320 * s, 720 * s, 400 * s, 705 * s, 480 * s);
-        ctx.bezierCurveTo(695 * s, 540 * s, 710 * s, 600 * s, 700 * s, ch);
-        // Right bank (meanders opposite)
-        ctx.lineTo(810 * s, ch);
-        ctx.bezierCurveTo(795 * s, 580 * s, 785 * s, 500 * s, 795 * s, 420 * s);
-        ctx.bezierCurveTo(805 * s, 340 * s, 780 * s, 260 * s, 790 * s, 160 * s);
-        ctx.bezierCurveTo(800 * s, 80 * s, 785 * s, 30 * s, 790 * s, 0);
+        ctx.moveTo(725 * s, 0);
+        ctx.bezierCurveTo(720 * s, 120 * s, 715 * s, 280 * s, 710 * s, 400 * s);
+        ctx.bezierCurveTo(705 * s, 500 * s, 708 * s, 560 * s, 705 * s, ch);
+        ctx.lineTo(800 * s, ch);
+        ctx.bezierCurveTo(798 * s, 540 * s, 793 * s, 420 * s, 795 * s, 300 * s);
+        ctx.bezierCurveTo(797 * s, 180 * s, 790 * s, 80 * s, 785 * s, 0);
         ctx.closePath();
         ctx.fill();
-        // River ripples (follow the curve)
+        // River ripples
         ctx.strokeStyle = 'rgba(100,170,220,0.3)';
         ctx.lineWidth = 1 * s;
         for (let i = 0; i < 12; i++) {
             const ry = (i * 50 + (gameTick * 0.5) % 50) * s;
-            const rxOff = Math.sin(i * 0.8) * 8; // meander offset
+            const rxOff = Math.sin(i * 0.7) * 4;
             ctx.beginPath();
-            ctx.moveTo((710 + rxOff) * s, ry);
-            ctx.quadraticCurveTo((745 + rxOff) * s, (ry + 8 * s), (780 + rxOff) * s, ry);
+            ctx.moveTo((712 + rxOff) * s, ry);
+            ctx.quadraticCurveTo((742 + rxOff) * s, (ry + 8 * s), (775 + rxOff) * s, ry);
             ctx.stroke();
         }
 
