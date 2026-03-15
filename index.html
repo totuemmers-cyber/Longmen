@@ -5750,13 +5750,13 @@
         { type: 'crane',     seasons: ['spring','summer','autumn'], speed: 0.5, fleeRange: 90, zonePref: 'water', flockSize: 1 },
         { type: 'magpie',    seasons: ['spring','summer'],          speed: 1.2, fleeRange: 70, zonePref: 'sky',   flockSize: 3 },
         { type: 'rabbit',    seasons: ['spring','summer','autumn','winter'], speed: 1.0, fleeRange: 60, zonePref: 'land', flockSize: 1 },
-        { type: 'koi',       seasons: ['spring','summer','autumn'], speed: 0.4, fleeRange: 30, zonePref: 'water', flockSize: 3 },
+        { type: 'koi',       seasons: ['spring','summer','autumn'], speed: 0.3, fleeRange: 20, zonePref: 'water', flockSize: 2 },
         { type: 'cat',       seasons: ['spring','summer','autumn','winter'], speed: 0.6, fleeRange: 50, zonePref: 'land', flockSize: 1 },
         { type: 'butterfly', seasons: ['spring','summer'],          speed: 0.8, fleeRange: 60, zonePref: 'sky',   flockSize: 2 },
     ];
 
-    // Water zone near the water object
-    const WATER_ZONE = { x: 770, y: 460, r: 120 };
+    // Water zone near the pond south of village
+    const WATER_ZONE = { x: 420, y: 560, r: 40 };
 
     class WildAnimal {
         constructor(type, x, y, speed, fleeRange) {
@@ -5795,6 +5795,11 @@
                 const angle = Math.atan2(this.y - fleeFromY, this.x - fleeFromX);
                 this.targetX = this.x + Math.cos(angle) * 80;
                 this.targetY = this.y + Math.sin(angle) * 80;
+                if (this.type === 'koi') {
+                    // Koi stay inside the pond
+                    this.targetX = Math.max(WATER_ZONE.x - WATER_ZONE.r, Math.min(WATER_ZONE.x + WATER_ZONE.r, this.targetX));
+                    this.targetY = Math.max(WATER_ZONE.y - WATER_ZONE.r * 0.6, Math.min(WATER_ZONE.y + WATER_ZONE.r * 0.6, this.targetY));
+                }
                 this.targetX = Math.max(10, Math.min(WORLD_W - 10, this.targetX));
                 this.targetY = Math.max(10, Math.min(WORLD_H - 10, this.targetY));
             } else {
