@@ -3571,45 +3571,111 @@
         ctx.fillStyle = '#baa870';
         ctx.fill();
 
-        // Stone paths
+        // Organic stone paths (curved with irregular edges)
         const paths = [
-            { x1: 200, y1: 300, x2: 640, y2: 300, w: 18 },
-            { x1: 420, y1: 150, x2: 420, y2: 480, w: 16 },
-            { x1: 280, y1: 200, x2: 560, y2: 400, w: 14 },
+            // Main east-west path (gentle S-curve)
+            { pts: [{x:180,y:310},{x:280,y:290},{x:370,y:305},{x:470,y:295},{x:560,y:310},{x:650,y:295}], w: 18 },
+            // North-south path (slight meander)
+            { pts: [{x:410,y:140},{x:425,y:210},{x:415,y:280},{x:430,y:350},{x:420,y:420},{x:425,y:490}], w: 16 },
+            // Diagonal path (organic curve)
+            { pts: [{x:270,y:195},{x:330,y:250},{x:400,y:300},{x:470,y:340},{x:540,y:390},{x:570,y:410}], w: 14 },
+            // Small garden path (winding)
+            { pts: [{x:150,y:360},{x:200,y:340},{x:260,y:330},{x:310,y:310}], w: 10 },
+            // Path to river
+            { pts: [{x:580,y:300},{x:620,y:290},{x:660,y:285},{x:700,y:295}], w: 12 },
         ];
-        ctx.fillStyle = '#9a9080';
+
         for (const p of paths) {
-            const dx = p.x2 - p.x1;
-            const dy = p.y2 - p.y1;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            const nx = -dy / len * p.w / 2;
-            const ny = dx / len * p.w / 2;
+            const pts = p.pts;
+            const hw = p.w / 2;
+            // Draw filled path with varying width
+            ctx.fillStyle = '#9a9080';
             ctx.beginPath();
-            ctx.moveTo((p.x1 + nx) * s, (p.y1 + ny) * s);
-            ctx.lineTo((p.x2 + nx) * s, (p.y2 + ny) * s);
-            ctx.lineTo((p.x2 - nx) * s, (p.y2 - ny) * s);
-            ctx.lineTo((p.x1 - nx) * s, (p.y1 - ny) * s);
+            // Forward edge
+            for (let i = 0; i < pts.length; i++) {
+                const prev = pts[Math.max(0, i - 1)];
+                const next = pts[Math.min(pts.length - 1, i + 1)];
+                const dx = next.x - prev.x;
+                const dy = next.y - prev.y;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                // Vary width slightly per point for organic feel
+                const wVar = hw * (0.85 + Math.sin(i * 1.7) * 0.2);
+                const nx = (-dy / len) * wVar;
+                const ny = (dx / len) * wVar;
+                if (i === 0) ctx.moveTo((pts[i].x + nx) * s, (pts[i].y + ny) * s);
+                else ctx.lineTo((pts[i].x + nx) * s, (pts[i].y + ny) * s);
+            }
+            // Return edge (reverse)
+            for (let i = pts.length - 1; i >= 0; i--) {
+                const prev = pts[Math.max(0, i - 1)];
+                const next = pts[Math.min(pts.length - 1, i + 1)];
+                const dx = next.x - prev.x;
+                const dy = next.y - prev.y;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const wVar = hw * (0.85 + Math.sin(i * 1.7) * 0.2);
+                const nx = (-dy / len) * wVar;
+                const ny = (dx / len) * wVar;
+                ctx.lineTo((pts[i].x - nx) * s, (pts[i].y - ny) * s);
+            }
             ctx.closePath();
             ctx.fill();
+
+            // Softer edges (slight blur effect with semi-transparent wider path)
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#8a7a60';
+            ctx.beginPath();
+            for (let i = 0; i < pts.length; i++) {
+                const prev = pts[Math.max(0, i - 1)];
+                const next = pts[Math.min(pts.length - 1, i + 1)];
+                const dx = next.x - prev.x;
+                const dy = next.y - prev.y;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const wVar = (hw + 3) * (0.9 + Math.sin(i * 2.1) * 0.15);
+                const nx = (-dy / len) * wVar;
+                const ny = (dx / len) * wVar;
+                if (i === 0) ctx.moveTo((pts[i].x + nx) * s, (pts[i].y + ny) * s);
+                else ctx.lineTo((pts[i].x + nx) * s, (pts[i].y + ny) * s);
+            }
+            for (let i = pts.length - 1; i >= 0; i--) {
+                const prev = pts[Math.max(0, i - 1)];
+                const next = pts[Math.min(pts.length - 1, i + 1)];
+                const dx = next.x - prev.x;
+                const dy = next.y - prev.y;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const wVar = (hw + 3) * (0.9 + Math.sin(i * 2.1) * 0.15);
+                const nx = (-dy / len) * wVar;
+                const ny = (dx / len) * wVar;
+                ctx.lineTo((pts[i].x - nx) * s, (pts[i].y - ny) * s);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
         }
-        // Stone path paving lines
+
+        // Irregular paving stones along paths
         ctx.strokeStyle = '#8a8070';
         ctx.lineWidth = 0.5 * s;
         for (const p of paths) {
-            const dx = p.x2 - p.x1;
-            const dy = p.y2 - p.y1;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            const steps = Math.floor(len / 12);
-            for (let i = 1; i < steps; i++) {
-                const t = i / steps;
-                const px = (p.x1 + dx * t) * s;
-                const py = (p.y1 + dy * t) * s;
-                const nx = -dy / len * (p.w / 2) * s;
-                const ny = dx / len * (p.w / 2) * s;
-                ctx.beginPath();
-                ctx.moveTo(px + nx, py + ny);
-                ctx.lineTo(px - nx, py - ny);
-                ctx.stroke();
+            const pts = p.pts;
+            for (let seg = 0; seg < pts.length - 1; seg++) {
+                const a = pts[seg], b = pts[seg + 1];
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const segLen = Math.sqrt(dx * dx + dy * dy);
+                const steps = Math.floor(segLen / 11);
+                for (let i = 1; i < steps; i++) {
+                    const t = i / steps;
+                    const px = (a.x + dx * t) * s;
+                    const py = (a.y + dy * t) * s;
+                    const len = segLen || 1;
+                    const hw2 = (p.w / 2) * (0.8 + Math.sin((seg * 5 + i) * 1.3) * 0.2);
+                    const nx = (-dy / len) * hw2 * s;
+                    const ny = (dx / len) * hw2 * s;
+                    ctx.beginPath();
+                    ctx.moveTo(px + nx, py + ny);
+                    ctx.lineTo(px - nx, py - ny);
+                    ctx.stroke();
+                }
             }
         }
 
@@ -5652,7 +5718,7 @@
         for (const cid of learner.wordHistory) {
             const v = vocab[cid];
             if (v) {
-                html += `<div class="vocab-word"><span class="pseudo">${v.hanzi}</span><span style="color:#a09070;font-size:10px;">${v.pinyin}</span><span class="meaning">${v.de}</span></div>`;
+                html += `<div class="vocab-word" data-cid="${cid}" style="cursor:pointer;" title="Klicken für Kalligraphie"><span class="pseudo">${v.hanzi}</span><span style="color:#a09070;font-size:10px;">${v.pinyin}</span><span class="meaning">${v.de}</span></div>`;
             }
         }
         if (known === 0) {
@@ -5660,6 +5726,21 @@
         }
         listEl.innerHTML = html;
     }
+
+    // Click on learned word in vocab panel → show calligraphy popup
+    document.getElementById('vocab-list').addEventListener('click', function(e) {
+        const wordEl = e.target.closest('.vocab-word[data-cid]');
+        if (!wordEl) return;
+        const cid = wordEl.dataset.cid;
+        const v = vocab[cid];
+        if (!v) return;
+        // Priority display: push to front of queue so it shows next
+        calligraphyQueue.unshift({ hanzi: v.hanzi, pinyin: v.pinyin, german: v.de });
+        // If nothing currently showing, start immediately
+        if (calligraphyOverlays.length === 0) {
+            _advanceCalligraphyQueue();
+        }
+    });
 
     function addLog(text, type) {
         const h = Math.floor(gameHour).toString().padStart(2, '0');
