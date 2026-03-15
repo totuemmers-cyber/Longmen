@@ -3571,18 +3571,18 @@
         ctx.fillStyle = '#baa870';
         ctx.fill();
 
-        // Stone paths (slightly curved for organic feel)
+        // Stone paths (mostly straight with subtle irregularity)
         const paths = [
-            // Main east-west path (gentle S-curve)
-            { pts: [{x:190,y:305},{x:300,y:293},{x:420,y:302},{x:540,y:295},{x:650,y:300}], w: 18 },
-            // North-south path (slight meander)
-            { pts: [{x:415,y:145},{x:422,y:230},{x:418,y:310},{x:424,y:390},{x:420,y:480}], w: 16 },
-            // Diagonal path (mild curve)
-            { pts: [{x:275,y:198},{x:350,y:255},{x:420,y:300},{x:500,y:355},{x:560,y:400}], w: 14 },
-            // Small garden path
-            { pts: [{x:150,y:370},{x:210,y:348},{x:275,y:330},{x:320,y:312}], w: 10 },
+            // Main east-west path
+            { pts: [{x:200,y:300},{x:420,y:298},{x:640,y:300}], w: 18 },
+            // North-south path
+            { pts: [{x:420,y:150},{x:418,y:310},{x:420,y:480}], w: 16 },
+            // Diagonal path
+            { pts: [{x:280,y:200},{x:420,y:298},{x:560,y:400}], w: 14 },
+            // Small side path
+            { pts: [{x:155,y:365},{x:240,y:340},{x:315,y:310}], w: 10 },
             // Path to river
-            { pts: [{x:575,y:298},{x:625,y:288},{x:670,y:290},{x:700,y:298}], w: 12 },
+            { pts: [{x:580,y:300},{x:640,y:294},{x:700,y:298}], w: 12 },
         ];
 
         for (const p of paths) {
