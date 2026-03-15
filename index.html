@@ -3604,17 +3604,19 @@
         ctx.bezierCurveTo(797 * s, 180 * s, 790 * s, 80 * s, 785 * s, 0);
         ctx.closePath();
         ctx.fill();
-        // River ripples
+        // River ripples (flow downward, clipped to river)
+        ctx.save();
+        ctx.clip(); // clip to the river path drawn above
         ctx.strokeStyle = 'rgba(100,170,220,0.3)';
         ctx.lineWidth = 1 * s;
-        for (let i = 0; i < 12; i++) {
-            const ry = (i * 50 + (gameTick * 0.5) % 50) * s;
-            const rxOff = Math.sin(i * 0.7) * 4;
+        for (let i = 0; i < 14; i++) {
+            const ry = (i * 50 - (gameTick * 0.4) % 50) * s;
             ctx.beginPath();
-            ctx.moveTo((712 + rxOff) * s, ry);
-            ctx.quadraticCurveTo((742 + rxOff) * s, (ry + 8 * s), (775 + rxOff) * s, ry);
+            ctx.moveTo(715 * s, ry);
+            ctx.quadraticCurveTo(750 * s, (ry + 8 * s), 785 * s, ry);
             ctx.stroke();
         }
+        ctx.restore(); // end river clipping
 
         // Green grass patches
         const grassPatches = [
@@ -4383,23 +4385,22 @@
             }
 
             case 'dock': {
-                // Wooden platform extending over water
-                // Water underneath
-                ctx.fillStyle = '#2a5a8a';
-                ctx.fillRect(x - w/2 - 2*canvasScale, y + h/4 - 2*canvasScale, w + 4*canvasScale, h/4 + 4*canvasScale);
-                // Support posts (in water)
+                // Wooden dock — transparent so ground/water show through
+                // Support posts
                 ctx.fillStyle = '#5a3a1a';
-                ctx.fillRect(x - w/3, y + h/6, 3*canvasScale, h/3);
-                ctx.fillRect(x + w/3 - 3*canvasScale, y + h/6, 3*canvasScale, h/3);
-                ctx.fillRect(x - w/3, y - h/6, 3*canvasScale, h/3);
-                ctx.fillRect(x + w/3 - 3*canvasScale, y - h/6, 3*canvasScale, h/3);
+                ctx.fillRect(x - w/3, y - h/6, 3*canvasScale, h/2);
+                ctx.fillRect(x + w/3 - 3*canvasScale, y - h/6, 3*canvasScale, h/2);
                 // Platform planks
                 ctx.fillStyle = '#7a5a2a';
                 for (let i = 0; i < 5; i++) {
                     const py = y - h/3 + i * h/6;
                     ctx.fillRect(x - w/2, py, w, h/7 - canvasScale);
-                    ctx.strokeStyle = '#5a3a18';
-                    ctx.lineWidth = canvasScale * 0.5;
+                }
+                // Plank gaps
+                ctx.strokeStyle = 'rgba(40,30,15,0.3)';
+                ctx.lineWidth = canvasScale * 0.5;
+                for (let i = 0; i < 5; i++) {
+                    const py = y - h/3 + i * h/6;
                     ctx.strokeRect(x - w/2, py, w, h/7 - canvasScale);
                 }
                 // Mooring post
