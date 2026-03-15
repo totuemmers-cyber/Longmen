@@ -3727,10 +3727,11 @@
                 ctx.fill();
                 // Awning drape scallops
                 ctx.fillStyle = '#a82818';
-                for (let i = 0; i < 4; i++) {
-                    const sx = x - w/2 + i * w/3;
+                for (let i = 0; i < 3; i++) {
+                    const sx = x - w/2 + 2*canvasScale + i * (w - 4*canvasScale) / 3;
+                    const cw = (w - 4*canvasScale) / 3;
                     ctx.beginPath();
-                    ctx.arc(sx + w/6, y - h/4 + 2*canvasScale, w/7, Math.PI, 0);
+                    ctx.arc(sx + cw/2, y - h/4 + 2*canvasScale, cw/2, Math.PI, 0);
                     ctx.fill();
                 }
                 // Roof
