@@ -3610,7 +3610,7 @@
         ctx.strokeStyle = 'rgba(100,170,220,0.3)';
         ctx.lineWidth = 1 * s;
         for (let i = 0; i < 14; i++) {
-            const ry = (i * 50 - (gameTick * 0.4) % 50) * s;
+            const ry = (i * 50 + (gameTick * 0.4) % 50) * s;
             ctx.beginPath();
             ctx.moveTo(715 * s, ry);
             ctx.quadraticCurveTo(750 * s, (ry + 8 * s), 785 * s, ry);
@@ -3618,12 +3618,12 @@
         }
         ctx.restore(); // end river clipping
 
-        // Green grass patches
+        // Green grass patches (positioned to avoid buildings)
         const grassPatches = [
-            { x: 100, y: 400, r: 80, c: '#508030' },
-            { x: 600, y: 120, r: 60, c: '#4a7a2e' },
-            { x: 150, y: 150, r: 70, c: '#467428' },
-            { x: 550, y: 500, r: 90, c: '#4e7e32' },
+            { x: 80,  y: 400, r: 55, c: '#508030' },
+            { x: 620, y: 100, r: 45, c: '#4a7a2e' },
+            { x: 140, y: 140, r: 50, c: '#467428' },
+            { x: 580, y: 530, r: 55, c: '#4e7e32' },
         ];
         for (const gp of grassPatches) {
             ctx.beginPath();
