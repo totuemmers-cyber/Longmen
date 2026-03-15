@@ -2537,7 +2537,6 @@
     let learnFlashes = [];
     let calligraphyOverlays = [];
     let calligraphyQueue = [];
-    let calligraphyPauseTimer = 0; // pause between consecutive overlays (frames)
     let proverbOverlay = null;
     let proverbMilestonesHit = new Set();
     let npcs = [];
@@ -3498,8 +3497,8 @@
     function triggerCalligraphy(hanzi, pinyin, german) {
         // Queue words for sequential display (one at a time)
         calligraphyQueue.push({ hanzi, pinyin, german });
-        // If nothing is currently showing and no pause active, start immediately
-        if (calligraphyOverlays.length === 0 && calligraphyPauseTimer <= 0) {
+        // If nothing is currently showing, start immediately
+        if (calligraphyOverlays.length === 0) {
             _advanceCalligraphyQueue();
         }
     }
@@ -7099,14 +7098,9 @@
             // Update learn flashes and calligraphy overlays
             learnFlashes = learnFlashes.filter(f => f.update(dt));
             calligraphyOverlays = calligraphyOverlays.filter(c => c.update(dt));
-            // Advance queue when current calligraphy finishes, with 4s pause
+            // Advance queue when current calligraphy finishes
             if (calligraphyOverlays.length === 0 && calligraphyQueue.length > 0) {
-                if (calligraphyPauseTimer > 0) {
-                    calligraphyPauseTimer -= dt;
-                } else {
-                    calligraphyPauseTimer = 240; // ~4 seconds at 60fps
-                    _advanceCalligraphyQueue();
-                }
+                _advanceCalligraphyQueue();
             }
             if (proverbOverlay && !proverbOverlay.update(dt)) proverbOverlay = null;
 
