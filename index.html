@@ -2536,6 +2536,7 @@
     let eventLog = [];
     let learnFlashes = [];
     let calligraphyOverlays = [];
+    let calligraphyQueue = [];
     let proverbOverlay = null;
     let proverbMilestonesHit = new Set();
     let npcs = [];
@@ -3154,8 +3155,17 @@
             c.clearRect(0, 0, s, s);
             c.textAlign = 'center';
             c.textBaseline = 'middle';
+            // Auto-scale font size based on character count
+            const len = this.hanzi.length;
+            let fontSize = len <= 1 ? 90 : len === 2 ? 60 : len === 3 ? 45 : Math.max(28, Math.floor(110 / len));
+            // Measure and shrink further if needed
+            c.font = `bold ${fontSize}px ${CJK_FONT}`;
+            const measured = c.measureText(this.hanzi).width;
+            if (measured > s * 0.9) {
+                fontSize = Math.floor(fontSize * (s * 0.9) / measured);
+                c.font = `bold ${fontSize}px ${CJK_FONT}`;
+            }
             // Ink bleed: draw twice with offset
-            c.font = `bold 90px ${CJK_FONT}`;
             c.fillStyle = INK_COLOR;
             c.globalAlpha = 0.25;
             c.fillText(this.hanzi, s / 2 + 1, s / 2 + 1);
@@ -3485,8 +3495,18 @@
 
     // --- Calligraphy trigger functions ---
     function triggerCalligraphy(hanzi, pinyin, german) {
-        // Replace any existing overlay (don't stack)
-        calligraphyOverlays = [new CalligraphyOverlay(hanzi, pinyin, german)];
+        // Queue words for sequential display (one at a time)
+        calligraphyQueue.push({ hanzi, pinyin, german });
+        // If nothing is currently showing, start immediately
+        if (calligraphyOverlays.length === 0) {
+            _advanceCalligraphyQueue();
+        }
+    }
+
+    function _advanceCalligraphyQueue() {
+        if (calligraphyQueue.length === 0) return;
+        const next = calligraphyQueue.shift();
+        calligraphyOverlays = [new CalligraphyOverlay(next.hanzi, next.pinyin, next.german)];
     }
 
     function checkProverbMilestone(wordCount) {
@@ -7078,6 +7098,10 @@
             // Update learn flashes and calligraphy overlays
             learnFlashes = learnFlashes.filter(f => f.update(dt));
             calligraphyOverlays = calligraphyOverlays.filter(c => c.update(dt));
+            // Advance queue when current calligraphy finishes
+            if (calligraphyOverlays.length === 0 && calligraphyQueue.length > 0) {
+                _advanceCalligraphyQueue();
+            }
             if (proverbOverlay && !proverbOverlay.update(dt)) proverbOverlay = null;
 
             // Update weather
