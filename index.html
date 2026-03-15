@@ -5833,6 +5833,11 @@
                 this.y += (dy / dist) * step;
                 this.facing = Math.atan2(dy, dx);
             }
+            // Koi: hard clamp position to pond every frame
+            if (this.type === 'koi') {
+                this.x = Math.max(WATER_ZONE.x - WATER_ZONE.r, Math.min(WATER_ZONE.x + WATER_ZONE.r, this.x));
+                this.y = Math.max(WATER_ZONE.y - WATER_ZONE.r * 0.6, Math.min(WATER_ZONE.y + WATER_ZONE.r * 0.6, this.y));
+            }
 
             // Despawn if off screen
             if (this.x < -30 || this.x > WORLD_W + 30 || this.y < -30 || this.y > WORLD_H + 30) {
