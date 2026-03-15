@@ -2224,7 +2224,7 @@
         { id: 'teahouse1',  type: 'teahouse',   x: 400, y: 250, w: 90, h: 65, label: '茶馆' },
         { id: 'market1',    type: 'market',      x: 300, y: 340, w: 70, h: 50, label: '市场' },
         { id: 'well1',      type: 'well',        x: 480, y: 350, w: 35, h: 35, label: '井' },
-        { id: 'bridge1',    type: 'bridge',      x: 750, y: 400, w: 90, h: 30, label: '桥' },
+        { id: 'bridge1',    type: 'bridge',      x: 750, y: 400, w: 90, h: 50, label: '桥' },
         { id: 'pagoda1',    type: 'pagoda',      x: 835, y: 140, w: 50, h: 80, label: '塔' },
         { id: 'gate1',      type: 'gate',        x: 100, y: 300, w: 50, h: 60, label: '门' },
         { id: 'bamboo1',    type: 'bamboo',      x: 60,  y: 200, w: 40, h: 70, label: '竹' },
@@ -2256,7 +2256,7 @@
     // River runs roughly x=705..800 (meandering bezier), full height
     const RIVER_LEFT  = 705;
     const RIVER_RIGHT = 800;
-    const BRIDGE = { x: 750, y: 400, halfW: 45, halfH: 20 };
+    const BRIDGE = { x: 750, y: 400, halfW: 45, halfH: 30 };
 
     function isInRiver(x) {
         return x > RIVER_LEFT && x < RIVER_RIGHT;
@@ -2281,16 +2281,15 @@
     function planWaypoints(fromX, fromY, toX, toY) {
         if (!crossesRiver(fromX, toX)) return null; // no waypoints needed
         const waypoints = [];
-        // Approach bridge from the correct side
+        // Approach bridge from the correct side (with generous margin from river edge)
         const comingFromLeft = fromX < RIVER_LEFT;
         const bridgeApproach = comingFromLeft
-            ? { x: RIVER_LEFT - 5, y: BRIDGE.y }
-            : { x: RIVER_RIGHT + 5, y: BRIDGE.y };
+            ? { x: RIVER_LEFT - 15, y: BRIDGE.y }
+            : { x: RIVER_RIGHT + 15, y: BRIDGE.y };
         const bridgeExit = comingFromLeft
-            ? { x: RIVER_RIGHT + 5, y: BRIDGE.y }
-            : { x: RIVER_LEFT - 5, y: BRIDGE.y };
+            ? { x: RIVER_RIGHT + 15, y: BRIDGE.y }
+            : { x: RIVER_LEFT - 15, y: BRIDGE.y };
         waypoints.push(bridgeApproach);
-        waypoints.push({ x: BRIDGE.x, y: BRIDGE.y }); // cross bridge center
         waypoints.push(bridgeExit);
         return waypoints;
     }
@@ -2310,8 +2309,8 @@
 
     // Check if a position is blocked (river without bridge, or building)
     function isBlocked(x, y, targetType) {
-        // River check (allow on bridge)
-        if (isInRiver(x) && Math.abs(y - BRIDGE.y) > BRIDGE.halfH + 8) {
+        // River check (allow on bridge with generous corridor)
+        if (isInRiver(x) && Math.abs(y - BRIDGE.y) > BRIDGE.halfH + 15) {
             return true;
         }
         // Building check
@@ -2405,6 +2404,8 @@
 
     // Set target with automatic river-crossing and building-avoidance waypoints
     function setTargetWithPath(character, tx, ty) {
+        // Clamp target out of the river to prevent characters from targeting positions inside it
+        tx = clampOutOfRiver(tx);
         character.targetX = tx;
         character.targetY = ty;
         // Determine what type of building the character is going to (so we don't avoid it)
@@ -2443,10 +2444,10 @@
         character.lastMoveY = character.y;
     }
 
-    // Ensure NPCs don't spawn inside the river
+    // Ensure positions don't land inside the river
     function clampOutOfRiver(x) {
-        if (x > RIVER_LEFT && x < BRIDGE.x) return RIVER_LEFT - 5;
-        if (x >= BRIDGE.x && x < RIVER_RIGHT) return RIVER_RIGHT + 5;
+        if (x > RIVER_LEFT && x < BRIDGE.x) return RIVER_LEFT - 10;
+        if (x >= BRIDGE.x && x < RIVER_RIGHT) return RIVER_RIGHT + 10;
         return x;
     }
 
@@ -3572,6 +3573,10 @@
             this.stuckTimer = 0;
             this.lastMoveX = this.x;
             this.lastMoveY = this.y;
+            // Steer memory: keep a chosen avoidance direction for several frames to prevent jitter
+            this.steerDx = 0;
+            this.steerDy = 0;
+            this.steerFrames = 0;
         }
 
         get moveSpeed() {
@@ -3634,10 +3639,12 @@
             if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
                 this.waypoints.shift();
                 this.stuckTimer = 0;
+                this.steerFrames = 0;
                 return false;
             }
             if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) {
                 this.stuckTimer = 0;
+                this.steerFrames = 0;
                 return true;
             }
             // Stuck detection: if barely moved in last ~2 seconds, skip waypoint or give up
@@ -3647,6 +3654,7 @@
                 this.stuckTimer = 0;
                 if (movedDist < 5) {
                     // Stuck! Skip current waypoint or give up entirely
+                    this.steerFrames = 0;
                     if (this.waypoints && this.waypoints.length > 0) {
                         this.waypoints.shift();
                     } else {
@@ -3665,7 +3673,25 @@
                 if (this.currentAction.target && typeof this.currentAction.target === 'string') tType = this.currentAction.target;
                 else { const a = ACTION_DEFS.find(a => a.id === this.currentAction.id); if (a) tType = a.target; }
             }
+            // Use cached steer direction if still active, otherwise recalculate
+            if (this.steerFrames > 0) {
+                this.steerFrames -= dt;
+                // Check if cached direction is still valid
+                if (!isBlocked(this.x + this.steerDx * step, this.y + this.steerDy * step, tType)) {
+                    this.x += this.steerDx * step;
+                    this.y += this.steerDy * step;
+                    this.facing = Math.atan2(this.steerDy, this.steerDx);
+                    return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
+                }
+                this.steerFrames = 0;
+            }
             const steer = steerAroundObstacles(this.x, this.y, dirX, dirY, step, tType);
+            // If steered away from original direction, cache it to prevent jitter
+            if (Math.abs(steer.dx - dirX) > 0.1 || Math.abs(steer.dy - dirY) > 0.1) {
+                this.steerDx = steer.dx;
+                this.steerDy = steer.dy;
+                this.steerFrames = 20;
+            }
             this.x += steer.dx * step;
             this.y += steer.dy * step;
             this.facing = Math.atan2(steer.dy, steer.dx);
@@ -5479,11 +5505,19 @@
             }
         }
 
-        // Label
+        // Label — per-type visual bottom offset (distance from center to visual bottom in world coords)
+        const visualBottom = {
+            house: 18, teahouse: 19, market: 14, well: 10, bridge: 22,
+            pagoda: 21, gate: 26, bamboo: 25, garden: obj.h/2, kitchen: 14,
+            workshop: 19, fish_pond: obj.h/2, shrine: 14, lantern_post: 16,
+            rice_paddy: obj.h/2, river: obj.h/2, dock: 12, lotus_pond: obj.h/2,
+            flower: 10, willow: 22, school: 20, medicine_hut: 13,
+            stable: 13, tea_terrace: 16, viewpoint: 13
+        }[obj.type] || obj.h/2;
         ctx.font = `${Math.round(9*canvasScale)}px 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif`;
         ctx.fillStyle = 'rgba(200,190,160,0.6)';
         ctx.textAlign = 'center';
-        ctx.fillText(obj.label, x, y + (h/2 + 14) * canvasScale);
+        ctx.fillText(obj.label, x, y + (visualBottom + 10) * canvasScale);
     }
 
     function drawPerson(ctx, person) {
@@ -6677,6 +6711,10 @@
             this.stuckTimer = 0;
             this.lastMoveX = this.x;
             this.lastMoveY = this.y;
+            // Steer memory
+            this.steerDx = 0;
+            this.steerDy = 0;
+            this.steerFrames = 0;
         }
 
         distTo(ox, oy) {
@@ -6696,10 +6734,12 @@
             if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
                 this.waypoints.shift();
                 this.stuckTimer = 0;
+                this.steerFrames = 0;
                 return false;
             }
             if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) {
                 this.stuckTimer = 0;
+                this.steerFrames = 0;
                 return true;
             }
             // Stuck detection
@@ -6708,6 +6748,7 @@
             if (this.stuckTimer > 30) {
                 this.stuckTimer = 0;
                 if (movedDist < 5) {
+                    this.steerFrames = 0;
                     if (this.waypoints && this.waypoints.length > 0) {
                         this.waypoints.shift();
                     } else {
@@ -6720,7 +6761,25 @@
             const spd = this.speed * dt * 0.35;
             const step = Math.min(spd, dist);
             const dirX = dx / dist, dirY = dy / dist;
+            // Use cached steer direction if still active, otherwise recalculate
+            if (this.steerFrames > 0) {
+                this.steerFrames -= dt;
+                // Check if cached direction is still valid
+                if (!isBlocked(this.x + this.steerDx * step, this.y + this.steerDy * step, null)) {
+                    this.x += this.steerDx * step;
+                    this.y += this.steerDy * step;
+                    this.facing = Math.atan2(this.steerDy, this.steerDx);
+                    return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
+                }
+                this.steerFrames = 0;
+            }
             const steer = steerAroundObstacles(this.x, this.y, dirX, dirY, step, null);
+            // If steered away from original direction, cache it to prevent jitter
+            if (Math.abs(steer.dx - dirX) > 0.1 || Math.abs(steer.dy - dirY) > 0.1) {
+                this.steerDx = steer.dx;
+                this.steerDy = steer.dy;
+                this.steerFrames = 20;
+            }
             this.x += steer.dx * step;
             this.y += steer.dy * step;
             this.facing = Math.atan2(steer.dy, steer.dx);
@@ -8675,13 +8734,16 @@
             // Update NPCs
             updateNPCs(dt);
 
-            // Soft safety net: gently nudge characters out if stuck inside obstacles
+            // Soft safety net: nudge characters out if stuck inside obstacles
             const allMovers = [...persons, ...npcs];
             for (const c of allMovers) {
-                // River: gentle push toward nearest bank (not instant teleport)
-                if (isInRiver(c.x) && Math.abs(c.y - BRIDGE.y) > BRIDGE.halfH + 8) {
+                // River: push toward nearest bank decisively
+                if (isInRiver(c.x) && Math.abs(c.y - BRIDGE.y) > BRIDGE.halfH + 15) {
                     const pushDir = c.x < BRIDGE.x ? -1 : 1;
-                    c.x += pushDir * 0.8 * dt;
+                    c.x += pushDir * 2.5 * dt;
+                    // Snap out if close to edge to prevent oscillation
+                    if (pushDir < 0 && c.x > RIVER_LEFT && c.x < RIVER_LEFT + 8) c.x = RIVER_LEFT - 5;
+                    if (pushDir > 0 && c.x < RIVER_RIGHT && c.x > RIVER_RIGHT - 8) c.x = RIVER_RIGHT + 5;
                 }
             }
 
