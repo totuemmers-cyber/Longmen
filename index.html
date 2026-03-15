@@ -344,7 +344,9 @@
     const NPC_NAMES = ["德","林","华","英","国","春","文","红","平","荣","光","清","福","寿","康","宝"];
 
     // ============================================================
-    //  AUDIO ENGINE (Web Audio API — procedural tribal soundtrack)
+    //  AUDIO ENGINE (Web Audio API — procedural Chinese soundtrack)
+    //  Instruments: dizi (竹笛), guzheng (古筝), erhu (二胡),
+    //  Chinese percussion (木鱼 muyu, 锣 luo, 磬 qing, 梆子 bangzi)
     // ============================================================
     let audioCtx = null;
     let audioMaster = null;
@@ -366,7 +368,7 @@
         if (audioCtx.state === 'suspended') audioCtx.resume();
         if (!audioStarted) {
             audioStarted = true;
-            startTribalMusic();
+            startChineseMusic();
         }
     }
 
@@ -393,74 +395,103 @@
         return buf;
     }
 
-    // --- ADAPTIVE MOOD-BASED MUSIC ENGINE ---
+    // --- ADAPTIVE MOOD-BASED CHINESE MUSIC ENGINE ---
     // Detects time-of-day + weather and smoothly transitions between musical moods
+    // Uses authentic Chinese pentatonic modes and instrument simulations
 
     // Mood definitions: each mood configures all music layers
-    // Chinese pentatonic scales: gōng (C D E G A), shāng, jué, zhǐ, yǔ modes
+    // Chinese pentatonic modes: 宫 gōng (C D E G A), 商 shāng (D E G A C),
+    // 角 jué (E G A C D), 徵 zhǐ (G A C D E), 羽 yǔ (A C D E G)
     const MUSIC_MOODS = {
         day: {
-            bpm: 58, droneFreq: 65.4, droneDetune: 0.2, droneVol: 0.08, droneFilter: 180,
-            scale: [261.6, 293.7, 329.6, 392, 440, 523.3], // C D E G A — gōng pentatonic
-            fluteVol: 0.24, fluteInterval: [4, 9], noteDur: [0.4, 1.0], noteCount: [2, 5],
-            drumVol: 0.3, drumPattern: 'tribal', shakerVol: 0.10,
-            ambVol: 0.04, ambFreq: 400, ambQ: 0.3, ambLfoRate: 0.12, ambLfoDepth: 0.02,
+            bpm: 52, droneFreq: 65.4, droneDetune: 0.15, droneVol: 0.06, droneFilter: 200,
+            // 宫 gōng mode — bright, pastoral, like a village marketplace
+            scale: [261.6, 293.7, 329.6, 392, 440, 523.3, 587.3],
+            diziVol: 0.22, diziInterval: [5, 10], noteDur: [0.3, 1.2], noteCount: [3, 6],
+            guzhengVol: 0.18, guzhengInterval: [3, 7], guzhengNotes: [3, 6],
+            erhuVol: 0.0, erhuInterval: [20, 40], erhuDur: [0, 0],
+            percVol: 0.20, percPattern: 'village', bangziVol: 0.08,
+            ambVol: 0.04, ambFreq: 400, ambQ: 0.3, ambLfoRate: 0.10, ambLfoDepth: 0.02,
         },
         dawn: {
-            bpm: 48, droneFreq: 82.4, droneDetune: 0.15, droneVol: 0.06, droneFilter: 150,
-            scale: [329.6, 392, 440, 523.3, 587.3, 659.3], // E G A C D — bright jué mode
-            fluteVol: 0.28, fluteInterval: [6, 14], noteDur: [0.6, 1.5], noteCount: [2, 4],
-            drumVol: 0.0, drumPattern: 'none', shakerVol: 0.06,
-            ambVol: 0.06, ambFreq: 500, ambQ: 0.2, ambLfoRate: 0.06, ambLfoDepth: 0.02,
+            bpm: 40, droneFreq: 82.4, droneDetune: 0.1, droneVol: 0.05, droneFilter: 160,
+            // 角 jué mode — serene, like morning mist over mountains
+            scale: [329.6, 392, 440, 523.3, 587.3, 659.3],
+            diziVol: 0.26, diziInterval: [8, 16], noteDur: [0.8, 2.0], noteCount: [2, 4],
+            guzhengVol: 0.14, guzhengInterval: [6, 14], guzhengNotes: [2, 4],
+            erhuVol: 0.0, erhuInterval: [30, 50], erhuDur: [0, 0],
+            percVol: 0.0, percPattern: 'none', bangziVol: 0.0,
+            ambVol: 0.06, ambFreq: 500, ambQ: 0.2, ambLfoRate: 0.05, ambLfoDepth: 0.02,
         },
         dusk: {
-            bpm: 50, droneFreq: 55, droneDetune: 0.3, droneVol: 0.10, droneFilter: 140,
-            scale: [220, 261.6, 293.7, 329.6, 392, 440], // A C D E G — yǔ mode, melancholic
-            fluteVol: 0.26, fluteInterval: [6, 13], noteDur: [0.7, 1.6], noteCount: [2, 4],
-            drumVol: 0.15, drumPattern: 'sparse', shakerVol: 0.05,
-            ambVol: 0.05, ambFreq: 300, ambQ: 0.4, ambLfoRate: 0.08, ambLfoDepth: 0.02,
+            bpm: 44, droneFreq: 55, droneDetune: 0.25, droneVol: 0.08, droneFilter: 140,
+            // 羽 yǔ mode — melancholic, contemplative evening
+            scale: [220, 261.6, 293.7, 329.6, 392, 440],
+            diziVol: 0.20, diziInterval: [7, 15], noteDur: [0.8, 2.0], noteCount: [2, 4],
+            guzhengVol: 0.16, guzhengInterval: [5, 10], guzhengNotes: [2, 5],
+            erhuVol: 0.16, erhuInterval: [10, 20], erhuDur: [2.0, 4.5],
+            percVol: 0.08, percPattern: 'temple', bangziVol: 0.0,
+            ambVol: 0.05, ambFreq: 300, ambQ: 0.4, ambLfoRate: 0.07, ambLfoDepth: 0.02,
         },
         night: {
-            bpm: 38, droneFreq: 55, droneDetune: 0.2, droneVol: 0.10, droneFilter: 100,
-            scale: [220, 261.6, 329.6, 392, 440], // A C E G A — sparse guqin feel
-            fluteVol: 0.16, fluteInterval: [10, 22], noteDur: [1.0, 2.5], noteCount: [1, 3],
-            drumVol: 0.0, drumPattern: 'none', shakerVol: 0.0,
-            ambVol: 0.06, ambFreq: 220, ambQ: 0.5, ambLfoRate: 0.04, ambLfoDepth: 0.03,
+            bpm: 32, droneFreq: 55, droneDetune: 0.15, droneVol: 0.08, droneFilter: 100,
+            // 羽 yǔ mode sparse — guqin-like contemplative night
+            scale: [220, 261.6, 329.6, 392, 440],
+            diziVol: 0.0, diziInterval: [20, 40], noteDur: [1.5, 3.0], noteCount: [1, 2],
+            guzhengVol: 0.12, guzhengInterval: [8, 18], guzhengNotes: [1, 3],
+            erhuVol: 0.14, erhuInterval: [12, 25], erhuDur: [3.0, 6.0],
+            percVol: 0.0, percPattern: 'none', bangziVol: 0.0,
+            ambVol: 0.05, ambFreq: 200, ambQ: 0.5, ambLfoRate: 0.03, ambLfoDepth: 0.03,
         },
         rain: {
-            bpm: 50, droneFreq: 61.7, droneDetune: 0.4, droneVol: 0.09, droneFilter: 130,
-            scale: [293.7, 329.6, 392, 440, 523.3], // D E G A C — shāng mode
-            fluteVol: 0.18, fluteInterval: [7, 16], noteDur: [0.6, 1.8], noteCount: [2, 4],
-            drumVol: 0.10, drumPattern: 'rain', shakerVol: 0.20,
-            ambVol: 0.06, ambFreq: 700, ambQ: 0.2, ambLfoRate: 0.25, ambLfoDepth: 0.05,
+            bpm: 46, droneFreq: 61.7, droneDetune: 0.35, droneVol: 0.07, droneFilter: 130,
+            // 商 shāng mode — wistful rain on bamboo leaves
+            scale: [293.7, 329.6, 392, 440, 523.3],
+            diziVol: 0.16, diziInterval: [8, 18], noteDur: [0.6, 1.8], noteCount: [2, 4],
+            guzhengVol: 0.20, guzhengInterval: [4, 8], guzhengNotes: [3, 6],
+            erhuVol: 0.12, erhuInterval: [14, 28], erhuDur: [2.0, 4.0],
+            percVol: 0.06, percPattern: 'rain', bangziVol: 0.12,
+            ambVol: 0.07, ambFreq: 700, ambQ: 0.2, ambLfoRate: 0.20, ambLfoDepth: 0.05,
         },
         snow: {
-            bpm: 35, droneFreq: 82.4, droneDetune: 0.15, droneVol: 0.07, droneFilter: 90,
-            scale: [329.6, 392, 523.3, 587.3, 659.3, 784], // high crystalline pentatonic
-            fluteVol: 0.20, fluteInterval: [12, 25], noteDur: [1.2, 3.0], noteCount: [1, 2],
-            drumVol: 0.0, drumPattern: 'none', shakerVol: 0.03,
+            bpm: 30, droneFreq: 82.4, droneDetune: 0.1, droneVol: 0.06, droneFilter: 90,
+            // High crystalline pentatonic — jade bells in snowfall
+            scale: [523.3, 587.3, 659.3, 784, 880],
+            diziVol: 0.14, diziInterval: [14, 28], noteDur: [1.5, 3.5], noteCount: [1, 2],
+            guzhengVol: 0.16, guzhengInterval: [10, 22], guzhengNotes: [1, 3],
+            erhuVol: 0.10, erhuInterval: [18, 35], erhuDur: [3.0, 5.0],
+            percVol: 0.0, percPattern: 'none', bangziVol: 0.0,
             ambVol: 0.04, ambFreq: 280, ambQ: 0.6, ambLfoRate: 0.03, ambLfoDepth: 0.02,
         },
         fog: {
-            bpm: 40, droneFreq: 55, droneDetune: 0.5, droneVol: 0.12, droneFilter: 100,
-            scale: [220, 261.6, 329.6, 392, 440], // sparse, mysterious
-            fluteVol: 0.14, fluteInterval: [14, 28], noteDur: [1.5, 3.5], noteCount: [1, 2],
-            drumVol: 0.0, drumPattern: 'none', shakerVol: 0.0,
+            bpm: 36, droneFreq: 55, droneDetune: 0.4, droneVol: 0.10, droneFilter: 100,
+            // Sparse, mysterious — like a Daoist temple in mist
+            scale: [220, 261.6, 329.6, 392, 440],
+            diziVol: 0.10, diziInterval: [16, 30], noteDur: [2.0, 4.0], noteCount: [1, 2],
+            guzhengVol: 0.10, guzhengInterval: [12, 24], guzhengNotes: [1, 2],
+            erhuVol: 0.12, erhuInterval: [15, 30], erhuDur: [3.0, 6.0],
+            percVol: 0.04, percPattern: 'temple', bangziVol: 0.0,
             ambVol: 0.07, ambFreq: 180, ambQ: 0.8, ambLfoRate: 0.04, ambLfoDepth: 0.05,
         },
         wind: {
-            bpm: 55, droneFreq: 65.4, droneDetune: 0.4, droneVol: 0.04, droneFilter: 160,
-            scale: [261.6, 329.6, 392, 440, 523.3], // C E G A C
-            fluteVol: 0.10, fluteInterval: [8, 18], noteDur: [0.3, 0.7], noteCount: [2, 4],
-            drumVol: 0.12, drumPattern: 'driving', shakerVol: 0.08,
-            ambVol: 0.04, ambFreq: 450, ambQ: 0.15, ambLfoRate: 0.35, ambLfoDepth: 0.07,
+            bpm: 50, droneFreq: 65.4, droneDetune: 0.35, droneVol: 0.04, droneFilter: 160,
+            // 徵 zhǐ mode — windswept, energetic
+            scale: [392, 440, 523.3, 587.3, 659.3],
+            diziVol: 0.12, diziInterval: [6, 14], noteDur: [0.2, 0.6], noteCount: [3, 5],
+            guzhengVol: 0.14, guzhengInterval: [4, 9], guzhengNotes: [3, 5],
+            erhuVol: 0.0, erhuInterval: [20, 40], erhuDur: [0, 0],
+            percVol: 0.10, percPattern: 'wind', bangziVol: 0.10,
+            ambVol: 0.05, ambFreq: 450, ambQ: 0.15, ambLfoRate: 0.30, ambLfoDepth: 0.07,
         },
         storm: {
-            bpm: 68, droneFreq: 49, droneDetune: 0.8, droneVol: 0.14, droneFilter: 220,
-            scale: [196, 220, 261.6, 293.7, 392], // low intense pentatonic
-            fluteVol: 0.08, fluteInterval: [5, 10], noteDur: [0.2, 0.5], noteCount: [3, 6],
-            drumVol: 0.6, drumPattern: 'storm', shakerVol: 0.25,
-            ambVol: 0.09, ambFreq: 550, ambQ: 0.1, ambLfoRate: 0.5, ambLfoDepth: 0.09,
+            bpm: 60, droneFreq: 49, droneDetune: 0.7, droneVol: 0.12, droneFilter: 220,
+            // Low intense — thunderous, dramatic like Beijing opera percussion
+            scale: [196, 220, 261.6, 293.7, 392],
+            diziVol: 0.06, diziInterval: [5, 10], noteDur: [0.15, 0.4], noteCount: [3, 6],
+            guzhengVol: 0.10, guzhengInterval: [3, 6], guzhengNotes: [4, 8],
+            erhuVol: 0.0, erhuInterval: [20, 40], erhuDur: [0, 0],
+            percVol: 0.45, percPattern: 'opera', bangziVol: 0.15,
+            ambVol: 0.08, ambFreq: 550, ambQ: 0.1, ambLfoRate: 0.45, ambLfoDepth: 0.09,
         },
     };
 
@@ -469,7 +500,9 @@
     // Adaptive nodes we can tweak at runtime
     let droneOsc1 = null, droneOsc2 = null, droneFilt = null, droneGainNode = null, droneLfo = null;
     let ambNoiseNode = null, ambFiltNode = null, ambGainNode = null, ambLfo = null, ambLfoGain = null;
-    let fluteGainNode = null;
+    let diziGainNode = null;
+    let guzhengGainNode = null;
+    let erhuGainNode = null;
     let activeMoodParams = null;
 
     function getMusicMood() {
@@ -490,7 +523,7 @@
         return 'day';
     }
 
-    function startTribalMusic() {
+    function startChineseMusic() {
         if (musicPlaying || !audioCtx) return;
         musicPlaying = true;
 
@@ -499,14 +532,16 @@
 
         // Master music gain
         musicGainNode = audioCtx.createGain();
-        musicGainNode.gain.value = 0.18;
+        musicGainNode.gain.value = 0.20;
         musicGainNode.connect(audioMaster);
         musicNodes.push(musicGainNode);
 
-        // Start all layers
+        // Start all Chinese instrument layers
         startAdaptiveDrone(musicGainNode);
-        startAdaptiveDrums(musicGainNode);
-        startAdaptiveFlute(musicGainNode);
+        startChinesePercussion(musicGainNode);
+        startDizi(musicGainNode);
+        startGuzheng(musicGainNode);
+        startErhu(musicGainNode);
         startAdaptiveAmbient(musicGainNode);
 
         // Mood check loop
@@ -526,12 +561,12 @@
     function transitionToMood(m) {
         activeMoodParams = { ...m };
         const t = audioCtx.currentTime;
-        const fade = 3.0; // seconds to cross-fade
+        const fade = 3.5; // seconds to cross-fade
 
         // Drone
         if (droneOsc1) {
             droneOsc1.frequency.linearRampToValueAtTime(m.droneFreq, t + fade);
-            droneOsc2.frequency.linearRampToValueAtTime(m.droneFreq + m.droneDetune, t + fade);
+            droneOsc2.frequency.linearRampToValueAtTime(m.droneFreq * 1.5, t + fade); // perfect 5th
             droneFilt.frequency.linearRampToValueAtTime(m.droneFilter, t + fade);
             droneGainNode.gain.linearRampToValueAtTime(m.droneVol, t + fade);
         }
@@ -545,237 +580,340 @@
             if (ambLfoGain) ambLfoGain.gain.linearRampToValueAtTime(m.ambLfoDepth, t + fade);
         }
 
-        // Flute volume
-        if (fluteGainNode) {
-            fluteGainNode.gain.linearRampToValueAtTime(m.fluteVol, t + fade);
+        // Dizi volume
+        if (diziGainNode) {
+            diziGainNode.gain.linearRampToValueAtTime(m.diziVol, t + fade);
+        }
+        // Guzheng volume
+        if (guzhengGainNode) {
+            guzhengGainNode.gain.linearRampToValueAtTime(m.guzhengVol, t + fade);
+        }
+        // Erhu volume
+        if (erhuGainNode) {
+            erhuGainNode.gain.linearRampToValueAtTime(m.erhuVol, t + fade);
         }
     }
 
-    // === ADAPTIVE DRONE ===
+    // === ADAPTIVE DRONE (古琴 guqin-style open strings) ===
+    // Uses perfect 5th intervals characteristic of Chinese music
     function startAdaptiveDrone(dest) {
         const m = activeMoodParams;
         droneGainNode = audioCtx.createGain();
         droneGainNode.gain.value = m.droneVol;
         droneGainNode.connect(dest);
 
+        // Root tone — warm sine, like an open guqin string
         droneOsc1 = audioCtx.createOscillator();
         droneOsc1.type = 'sine';
         droneOsc1.frequency.value = m.droneFreq;
         droneFilt = audioCtx.createBiquadFilter();
         droneFilt.type = 'lowpass';
         droneFilt.frequency.value = m.droneFilter;
-        droneFilt.Q.value = 2;
+        droneFilt.Q.value = 1.5;
         droneOsc1.connect(droneFilt);
         droneFilt.connect(droneGainNode);
         droneOsc1.start();
         musicNodes.push(droneOsc1);
 
+        // Perfect 5th above — characteristic Chinese interval
         droneOsc2 = audioCtx.createOscillator();
         droneOsc2.type = 'triangle';
-        droneOsc2.frequency.value = m.droneFreq + m.droneDetune;
+        droneOsc2.frequency.value = m.droneFreq * 1.5; // perfect 5th
         const filt2 = audioCtx.createBiquadFilter();
         filt2.type = 'lowpass';
-        filt2.frequency.value = m.droneFilter * 0.9;
+        filt2.frequency.value = m.droneFilter * 0.7;
+        filt2.Q.value = 1;
+        const droneGain2 = audioCtx.createGain();
+        droneGain2.gain.value = 0.4; // softer 5th
         droneOsc2.connect(filt2);
-        filt2.connect(droneGainNode);
+        filt2.connect(droneGain2);
+        droneGain2.connect(droneGainNode);
         droneOsc2.start();
         musicNodes.push(droneOsc2);
 
+        // Slow LFO for breathing quality (like guqin vibrato 吟)
         droneLfo = audioCtx.createOscillator();
         droneLfo.type = 'sine';
-        droneLfo.frequency.value = 0.08;
+        droneLfo.frequency.value = 0.06; // very slow breathing
         const lfoG = audioCtx.createGain();
-        lfoG.gain.value = 50;
+        lfoG.gain.value = 30;
         droneLfo.connect(lfoG);
         lfoG.connect(droneFilt.frequency);
         droneLfo.start();
         musicNodes.push(droneLfo);
     }
 
-    // === ADAPTIVE DRUMS ===
-    function startAdaptiveDrums(dest) {
-        const drumDest = audioCtx.createGain();
-        drumDest.gain.value = 1.0;
-        drumDest.connect(dest);
-        musicNodes.push(drumDest);
-        scheduleAdaptiveDrumLoop(drumDest);
+    // === CHINESE PERCUSSION (木鱼 muyu, 锣 luo, 磬 qing, 梆子 bangzi, 鼓 gu) ===
+    function startChinesePercussion(dest) {
+        const percDest = audioCtx.createGain();
+        percDest.gain.value = 1.0;
+        percDest.connect(dest);
+        musicNodes.push(percDest);
+        schedulePercLoop(percDest);
     }
 
-    function scheduleAdaptiveDrumLoop(dest) {
-        if (!audioCtx || !soundEnabled || !musicPlaying) { setTimeout(() => scheduleAdaptiveDrumLoop(dest), 1000); return; }
+    function schedulePercLoop(dest) {
+        if (!audioCtx || !soundEnabled || !musicPlaying) { setTimeout(() => schedulePercLoop(dest), 1000); return; }
 
         const m = activeMoodParams;
         const now = audioCtx.currentTime;
         const bpm = m.bpm;
         const beat = 60 / bpm;
         const barLen = beat * 4;
-        const bars = 4; // schedule 4 bars at a time for longer variety
+        const bars = 4;
 
         for (let bar = 0; bar < bars; bar++) {
             const bs = now + bar * barLen;
 
-            if (m.drumPattern === 'none') continue;
+            if (m.percPattern === 'none') continue;
 
-            if (m.drumPattern === 'tribal') {
-                // Classic tribal: kick 1,3 — rim 2,4 — shaker 8ths — occasional fills
-                playKick(bs, dest, m.drumVol);
-                playKick(bs + beat * 2, dest, m.drumVol);
-                if (Math.random() < 0.3) playKick(bs + beat * 2.5, dest, m.drumVol * 0.35);
-                playRim(bs + beat, dest, m.drumVol * 0.5);
-                playRim(bs + beat * 3, dest, m.drumVol * 0.5);
-                for (let i = 0; i < 8; i++) playShaker(bs + i * beat * 0.5, dest, m.shakerVol * (i % 2 === 0 ? 1.4 : 1));
-                if (Math.random() < 0.12) {
-                    playTom(bs + beat * 3, 80, dest, m.drumVol * 0.6);
-                    playTom(bs + beat * 3.25, 95, dest, m.drumVol * 0.6);
-                    playTom(bs + beat * 3.5, 110, dest, m.drumVol * 0.6);
+            if (m.percPattern === 'village') {
+                // Lively village: muyu on beats, bangzi accents, occasional small gong
+                playMuyu(bs, dest, m.percVol);
+                playMuyu(bs + beat * 2, dest, m.percVol);
+                if (Math.random() < 0.4) playMuyu(bs + beat, dest, m.percVol * 0.5);
+                if (Math.random() < 0.3) playMuyu(bs + beat * 3, dest, m.percVol * 0.5);
+                playBangzi(bs + beat, dest, m.bangziVol);
+                playBangzi(bs + beat * 3, dest, m.bangziVol);
+                // Occasional small gong on downbeat
+                if (Math.random() < 0.15) playLuo(bs, dest, m.percVol * 0.3, 'small');
+                // Gu (drum) on 1 and 3 softly
+                playGu(bs, dest, m.percVol * 0.4);
+                if (Math.random() < 0.6) playGu(bs + beat * 2, dest, m.percVol * 0.3);
+                // Fill every 4th bar
+                if (bar % 4 === 3 && Math.random() < 0.4) {
+                    playBangzi(bs + beat * 3.5, dest, m.bangziVol * 0.7);
+                    playMuyu(bs + beat * 3.25, dest, m.percVol * 0.4);
+                    playMuyu(bs + beat * 3.75, dest, m.percVol * 0.4);
                 }
-                // Variation: extra syncopation every few bars
+            } else if (m.percPattern === 'temple') {
+                // Contemplative: sparse muyu, occasional qing (temple bell)
+                if (Math.random() < 0.5) playMuyu(bs, dest, m.percVol);
+                if (Math.random() < 0.2) playMuyu(bs + beat * 2, dest, m.percVol * 0.4);
+                // Temple bell (qing) every few bars
+                if (bar % 4 === 0 && Math.random() < 0.4) playQing(bs, dest, m.percVol * 0.5);
+            } else if (m.percPattern === 'rain') {
+                // Rain on bamboo: gentle bangzi like raindrops, sparse muyu
+                if (Math.random() < 0.4) playMuyu(bs, dest, m.percVol * 0.5);
+                for (let i = 0; i < 8; i++) {
+                    if (Math.random() < 0.35) playBangzi(bs + i * beat * 0.5, dest, m.bangziVol * randFloat(0.3, 1.0));
+                }
+                if (bar % 4 === 0 && Math.random() < 0.3) playQing(bs, dest, m.percVol * 0.3);
+            } else if (m.percPattern === 'wind') {
+                // Driving wind: faster bangzi, energetic gu
+                playGu(bs, dest, m.percVol * 0.5);
+                playGu(bs + beat * 2, dest, m.percVol * 0.4);
+                if (Math.random() < 0.4) playGu(bs + beat * 1.5, dest, m.percVol * 0.25);
+                playBangzi(bs + beat, dest, m.bangziVol);
+                playBangzi(bs + beat * 3, dest, m.bangziVol);
+                for (let i = 0; i < 4; i++) {
+                    if (Math.random() < 0.3) playBangzi(bs + i * beat + beat * 0.5, dest, m.bangziVol * 0.5);
+                }
+            } else if (m.percPattern === 'opera') {
+                // Beijing opera style: dramatic gong, rapid bangzi, heavy gu
+                playGu(bs, dest, m.percVol);
+                playGu(bs + beat, dest, m.percVol * 0.7);
+                playGu(bs + beat * 2, dest, m.percVol * 0.9);
+                playGu(bs + beat * 3, dest, m.percVol * 0.6);
+                playLuo(bs, dest, m.percVol * 0.5, 'large');
+                if (Math.random() < 0.5) playLuo(bs + beat * 2, dest, m.percVol * 0.3, 'small');
+                for (let i = 0; i < 8; i++) playBangzi(bs + i * beat * 0.5, dest, m.bangziVol * (i % 2 === 0 ? 1.0 : 0.6));
+                // Dramatic gong crash
+                if (Math.random() < 0.2) {
+                    playLuo(bs + beat * 3.5, dest, m.percVol * 0.7, 'large');
+                }
+                // Rapid fill
                 if (bar % 4 === 3 && Math.random() < 0.5) {
-                    playKick(bs + beat * 1.5, dest, m.drumVol * 0.5);
-                    playRim(bs + beat * 3.5, dest, m.drumVol * 0.4);
-                }
-            } else if (m.drumPattern === 'sparse') {
-                // Dusk: just a deep kick on 1, occasional rim
-                playKick(bs, dest, m.drumVol);
-                if (Math.random() < 0.4) playRim(bs + beat * 2, dest, m.drumVol * 0.3);
-                if (Math.random() < 0.2) playShaker(bs + beat * 3, dest, m.shakerVol);
-            } else if (m.drumPattern === 'rain') {
-                // Rain: light shaker-heavy pattern, muted kicks
-                if (Math.random() < 0.5) playKick(bs, dest, m.drumVol * 0.5);
-                if (Math.random() < 0.3) playKick(bs + beat * 2, dest, m.drumVol * 0.4);
-                for (let i = 0; i < 16; i++) {
-                    if (Math.random() < 0.6) playShaker(bs + i * beat * 0.25, dest, m.shakerVol * randFloat(0.5, 1.0));
-                }
-            } else if (m.drumPattern === 'driving') {
-                // Wind: faster, driving rhythm
-                playKick(bs, dest, m.drumVol);
-                playKick(bs + beat * 1.5, dest, m.drumVol * 0.6);
-                playKick(bs + beat * 2.5, dest, m.drumVol * 0.8);
-                playRim(bs + beat, dest, m.drumVol * 0.5);
-                playRim(bs + beat * 3, dest, m.drumVol * 0.5);
-                for (let i = 0; i < 8; i++) playShaker(bs + i * beat * 0.5, dest, m.shakerVol);
-            } else if (m.drumPattern === 'storm') {
-                // Storm: intense, chaotic fills, heavy kicks
-                playKick(bs, dest, m.drumVol);
-                playKick(bs + beat, dest, m.drumVol * 0.7);
-                playKick(bs + beat * 2, dest, m.drumVol * 0.9);
-                playKick(bs + beat * 3, dest, m.drumVol * 0.6);
-                playRim(bs + beat * 0.5, dest, m.drumVol * 0.5);
-                playRim(bs + beat * 1.5, dest, m.drumVol * 0.5);
-                playRim(bs + beat * 2.5, dest, m.drumVol * 0.5);
-                playRim(bs + beat * 3.5, dest, m.drumVol * 0.5);
-                for (let i = 0; i < 16; i++) playShaker(bs + i * beat * 0.25, dest, m.shakerVol * randFloat(0.7, 1.0));
-                // Thunder-like tom rolls
-                if (Math.random() < 0.25) {
-                    for (let j = 0; j < 4; j++) playTom(bs + beat * 3 + j * 0.12, 60 + j * 15, dest, m.drumVol * 0.7);
+                    for (let j = 0; j < 6; j++) playGu(bs + beat * 3 + j * 0.08, dest, m.percVol * (0.4 + j * 0.1));
                 }
             }
         }
 
-        setTimeout(() => scheduleAdaptiveDrumLoop(dest), (barLen * bars - 0.2) * 1000);
+        setTimeout(() => schedulePercLoop(dest), (barLen * bars - 0.2) * 1000);
     }
 
-    function playKick(time, dest, vol) {
+    // 木鱼 Muyu — wooden fish block (hollow, warm click)
+    function playMuyu(time, dest, vol) {
         const g = audioCtx.createGain();
-        g.gain.setValueAtTime(vol || 0.8, time);
-        g.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+        g.gain.setValueAtTime(vol || 0.3, time);
+        g.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
         g.connect(dest);
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(80, time);
-        osc.frequency.exponentialRampToValueAtTime(30, time + 0.15);
-        osc.connect(g);
-        osc.start(time);
-        osc.stop(time + 0.4);
-        const ng = audioCtx.createGain();
-        ng.gain.setValueAtTime(0.3 * (vol || 0.8), time);
-        ng.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-        ng.connect(dest);
-        const ns = audioCtx.createBufferSource();
-        ns.buffer = createNoiseBuffer(0.05);
-        ns.connect(ng);
-        ns.start(time);
-        ns.stop(time + 0.05);
-    }
-
-    function playRim(time, dest, vol) {
-        const g = audioCtx.createGain();
-        g.gain.setValueAtTime(vol || 0.4, time);
-        g.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
-        g.connect(dest);
+        // Tuned wooden resonance
         const osc = audioCtx.createOscillator();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(800, time);
-        osc.frequency.exponentialRampToValueAtTime(400, time + 0.05);
-        osc.connect(g);
+        osc.frequency.setValueAtTime(800 + Math.random() * 100, time);
+        osc.frequency.exponentialRampToValueAtTime(400, time + 0.08);
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = 'bandpass';
+        filt.frequency.value = 1200;
+        filt.Q.value = 3;
+        osc.connect(filt);
+        filt.connect(g);
         osc.start(time);
-        osc.stop(time + 0.08);
+        osc.stop(time + 0.12);
+        // Click transient
         const ng = audioCtx.createGain();
-        ng.gain.setValueAtTime(0.25 * (vol || 0.4), time);
-        ng.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+        ng.gain.setValueAtTime(0.4 * (vol || 0.3), time);
+        ng.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+        const nf = audioCtx.createBiquadFilter();
+        nf.type = 'bandpass';
+        nf.frequency.value = 3000;
+        nf.Q.value = 2;
+        nf.connect(ng);
+        ng.connect(dest);
+        const ns = audioCtx.createBufferSource();
+        ns.buffer = createNoiseBuffer(0.02);
+        ns.connect(nf);
+        ns.start(time);
+        ns.stop(time + 0.02);
+    }
+
+    // 梆子 Bangzi — wooden clapper (bright, sharp)
+    function playBangzi(time, dest, vol) {
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(vol || 0.15, time);
+        g.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+        g.connect(dest);
+        const osc = audioCtx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1800 + Math.random() * 200, time);
+        osc.frequency.exponentialRampToValueAtTime(1200, time + 0.03);
         const filt = audioCtx.createBiquadFilter();
         filt.type = 'bandpass';
         filt.frequency.value = 2500;
-        filt.Q.value = 2;
-        filt.connect(ng);
+        filt.Q.value = 4;
+        osc.connect(filt);
+        filt.connect(g);
+        osc.start(time);
+        osc.stop(time + 0.05);
+    }
+
+    // 锣 Luo — gong (metallic shimmer with pitch bend)
+    function playLuo(time, dest, vol, size) {
+        const isLarge = size === 'large';
+        const baseFreq = isLarge ? 120 : 380;
+        const dur = isLarge ? 1.5 : 0.8;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(vol || 0.4, time);
+        g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+        g.connect(dest);
+        // Main tone with characteristic pitch bend (锣 bends down)
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq * 1.15, time);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq, time + 0.3);
+        osc.connect(g);
+        osc.start(time);
+        osc.stop(time + dur);
+        // Metallic overtones
+        const osc2 = audioCtx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(baseFreq * 2.76, time);
+        osc2.frequency.exponentialRampToValueAtTime(baseFreq * 2.4, time + 0.2);
+        const g2 = audioCtx.createGain();
+        g2.gain.setValueAtTime((vol || 0.4) * 0.3, time);
+        g2.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.7);
+        osc2.connect(g2);
+        g2.connect(dest);
+        osc2.start(time);
+        osc2.stop(time + dur * 0.7);
+        // Shimmer noise
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime((vol || 0.4) * 0.15, time);
+        ng.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.4);
+        const nf = audioCtx.createBiquadFilter();
+        nf.type = 'bandpass';
+        nf.frequency.value = baseFreq * 4;
+        nf.Q.value = 2;
+        nf.connect(ng);
         ng.connect(dest);
         const ns = audioCtx.createBufferSource();
-        ns.buffer = createNoiseBuffer(0.03);
-        ns.connect(filt);
+        ns.buffer = createNoiseBuffer(dur * 0.4);
+        ns.connect(nf);
         ns.start(time);
-        ns.stop(time + 0.03);
+        ns.stop(time + dur * 0.4);
     }
 
-    function playShaker(time, dest, vol) {
+    // 磬 Qing — temple bell/chime (pure, resonant, long decay)
+    function playQing(time, dest, vol) {
+        const freq = 1046.5 + Math.random() * 200; // high C area
+        const dur = 3.0;
         const g = audioCtx.createGain();
-        g.gain.setValueAtTime(vol || 0.15, time);
-        g.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
-        const filt = audioCtx.createBiquadFilter();
-        filt.type = 'highpass';
-        filt.frequency.value = 6000;
-        filt.connect(g);
-        g.connect(dest);
-        const ns = audioCtx.createBufferSource();
-        ns.buffer = createNoiseBuffer(0.06);
-        ns.connect(filt);
-        ns.start(time);
-        ns.stop(time + 0.06);
-    }
-
-    function playTom(time, freq, dest, vol) {
-        const g = audioCtx.createGain();
-        g.gain.setValueAtTime(vol || 0.5, time);
-        g.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
+        g.gain.setValueAtTime(vol || 0.3, time);
+        g.gain.setValueAtTime((vol || 0.3) * 0.8, time + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, time + dur);
         g.connect(dest);
         const osc = audioCtx.createOscillator();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, time);
-        osc.frequency.exponentialRampToValueAtTime(freq * 0.5, time + 0.2);
+        osc.frequency.value = freq;
         osc.connect(g);
         osc.start(time);
-        osc.stop(time + 0.25);
+        osc.stop(time + dur);
+        // Overtone
+        const osc2 = audioCtx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.value = freq * 2.5;
+        const g2 = audioCtx.createGain();
+        g2.gain.setValueAtTime((vol || 0.3) * 0.15, time);
+        g2.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.5);
+        osc2.connect(g2);
+        g2.connect(dest);
+        osc2.start(time);
+        osc2.stop(time + dur * 0.5);
     }
 
-    // === ADAPTIVE FLUTE ===
-    function startAdaptiveFlute(dest) {
-        fluteGainNode = audioCtx.createGain();
-        fluteGainNode.gain.value = activeMoodParams.fluteVol;
-        fluteGainNode.connect(dest);
-        musicNodes.push(fluteGainNode);
+    // 鼓 Gu — Chinese drum (deeper, warmer than Western kick)
+    function playGu(time, dest, vol) {
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(vol || 0.5, time);
+        g.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+        g.connect(dest);
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(100, time);
+        osc.frequency.exponentialRampToValueAtTime(50, time + 0.2);
+        osc.connect(g);
+        osc.start(time);
+        osc.stop(time + 0.35);
+        // Skin slap
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(0.25 * (vol || 0.5), time);
+        ng.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = 'bandpass';
+        filt.frequency.value = 400;
+        filt.Q.value = 1;
+        filt.connect(ng);
+        ng.connect(dest);
+        const ns = audioCtx.createBufferSource();
+        ns.buffer = createNoiseBuffer(0.04);
+        ns.connect(filt);
+        ns.start(time);
+        ns.stop(time + 0.04);
+    }
 
-        let lastNoteIdx = -1; // avoid repeating same note
-        let phraseHistory = []; // track recent intervals for melodic variety
+    // === 竹笛 DIZI (Chinese bamboo flute) ===
+    // Characterized by bright tone, wide vibrato, ornamental grace notes,
+    // and buzzing membrane (膜 mó) resonance
+    function startDizi(dest) {
+        diziGainNode = audioCtx.createGain();
+        diziGainNode.gain.value = activeMoodParams.diziVol;
+        diziGainNode.connect(dest);
+        musicNodes.push(diziGainNode);
 
-        function playAdaptivePhrase() {
+        let lastNoteIdx = -1;
+
+        function playDiziPhrase() {
             if (!audioCtx || !musicPlaying) return;
             const m = activeMoodParams;
+            if (m.diziVol <= 0) { setTimeout(playDiziPhrase, 5000); return; }
             const scale = m.scale;
             const now = audioCtx.currentTime;
             const noteCount = randInt(m.noteCount[0], m.noteCount[1]);
             let t = now + randFloat(0.1, 0.4);
 
-            // Melodic contour: pick a shape (ascending, descending, arch, valley)
-            const contours = ['asc', 'desc', 'arch', 'valley', 'random'];
+            // Chinese melodic contours: often start high and descend, or ascend to a peak
+            const contours = ['asc', 'desc', 'arch', 'valley', 'step_down', 'random'];
             const contour = randEl(contours);
 
             for (let i = 0; i < noteCount; i++) {
@@ -790,74 +928,102 @@
                 } else if (contour === 'valley') {
                     const pos = i / (noteCount - 1 || 1);
                     noteIdx = Math.floor(Math.abs(pos * 2 - 1) * (scale.length - 1));
+                } else if (contour === 'step_down') {
+                    // Characteristic Chinese descending pattern with repeated notes
+                    noteIdx = Math.max(0, scale.length - 1 - Math.floor(i / 2));
                 } else {
-                    // Random but avoid repeating same note
                     do { noteIdx = randInt(0, scale.length - 1); } while (noteIdx === lastNoteIdx && scale.length > 2);
                 }
-                // Small random offset for naturalness
                 noteIdx = Math.max(0, Math.min(scale.length - 1, noteIdx + randInt(-1, 1)));
                 lastNoteIdx = noteIdx;
 
                 const freq = scale[noteIdx];
                 const dur = randFloat(m.noteDur[0], m.noteDur[1]);
 
-                // Occasional grace note
-                if (i > 0 && Math.random() < 0.2) {
-                    const graceFreq = scale[Math.max(0, noteIdx - 1)];
-                    playFluteNote(t, graceFreq, 0.08, fluteGainNode, 0.35);
-                    t += 0.1;
+                // 倚音 yǐyīn — grace note (very common in dizi playing)
+                if (i > 0 && Math.random() < 0.35) {
+                    const graceIdx = Math.max(0, noteIdx + randEl([-1, 1, -2]));
+                    const graceFreq = scale[Math.min(scale.length - 1, Math.max(0, graceIdx))];
+                    playDiziNote(t, graceFreq, 0.06, diziGainNode, 0.3);
+                    t += 0.07;
                 }
 
-                playFluteNote(t, freq, dur, fluteGainNode, 0.55);
-                t += dur + randFloat(0.05, 0.25);
+                // 滑音 huáyīn — pitch slide between notes (30% chance)
+                const slideFrom = (i > 0 && Math.random() < 0.3) ? freq * randFloat(0.92, 1.08) : freq;
+                playDiziNote(t, freq, dur, diziGainNode, 0.5, slideFrom);
+                t += dur + randFloat(0.05, 0.2);
             }
 
-            // Occasionally hold a long sustained note after the phrase
-            if (Math.random() < 0.25) {
-                const holdFreq = scale[randInt(0, 2)]; // low note
-                const holdDur = randFloat(1.5, 3.5);
-                t += randFloat(0.3, 0.8);
-                playFluteNote(t, holdFreq, holdDur, fluteGainNode, 0.35);
+            // Long sustained note with wide vibrato (历音 lìyīn)
+            if (Math.random() < 0.3) {
+                const holdFreq = scale[randInt(0, 2)];
+                const holdDur = randFloat(2.0, 4.0);
+                t += randFloat(0.3, 0.6);
+                playDiziNote(t, holdFreq, holdDur, diziGainNode, 0.35, null, true);
             }
 
-            const nextDelay = randFloat(m.fluteInterval[0], m.fluteInterval[1]) * 1000;
-            setTimeout(playAdaptivePhrase, nextDelay);
+            const nextDelay = randFloat(m.diziInterval[0], m.diziInterval[1]) * 1000;
+            setTimeout(playDiziPhrase, nextDelay);
         }
 
-        setTimeout(playAdaptivePhrase, 2500);
+        setTimeout(playDiziPhrase, 3000);
     }
 
-    function playFluteNote(t, freq, dur, dest, vol) {
+    function playDiziNote(t, freq, dur, dest, vol, slideFrom, wideVibrato) {
         const noteGain = audioCtx.createGain();
         noteGain.gain.setValueAtTime(0, t);
-        noteGain.gain.linearRampToValueAtTime(vol, t + 0.05);
-        noteGain.gain.setValueAtTime(vol * 0.85, t + dur * 0.6);
+        noteGain.gain.linearRampToValueAtTime(vol, t + 0.03);
+        noteGain.gain.setValueAtTime(vol * 0.9, t + dur * 0.5);
         noteGain.gain.linearRampToValueAtTime(0, t + dur);
         noteGain.connect(dest);
 
+        // Main tone — brighter than a Western flute
         const osc = audioCtx.createOscillator();
         osc.type = 'sine';
-        osc.frequency.value = freq;
-        // Vibrato
+        if (slideFrom && slideFrom !== freq) {
+            osc.frequency.setValueAtTime(slideFrom, t);
+            osc.frequency.linearRampToValueAtTime(freq, t + 0.08);
+        } else {
+            osc.frequency.value = freq;
+        }
+
+        // 膜振动 mó zhèndòng — membrane buzzing (characteristic dizi sound)
+        // Simulated with a slightly detuned overtone
+        const buzzOsc = audioCtx.createOscillator();
+        buzzOsc.type = 'sine';
+        buzzOsc.frequency.value = freq * 2.01; // slightly detuned 2nd harmonic
+        const buzzGain = audioCtx.createGain();
+        buzzGain.gain.setValueAtTime(0, t);
+        buzzGain.gain.linearRampToValueAtTime(vol * 0.12, t + 0.03);
+        buzzGain.gain.linearRampToValueAtTime(0, t + dur);
+        buzzOsc.connect(buzzGain);
+        buzzGain.connect(dest);
+        buzzOsc.start(t);
+        buzzOsc.stop(t + dur + 0.05);
+
+        // Vibrato — wider and faster than Western flute (Chinese style 揉音 róuyīn)
         const vib = audioCtx.createOscillator();
         vib.type = 'sine';
-        vib.frequency.value = 4.5 + Math.random() * 2;
+        vib.frequency.value = wideVibrato ? 5.5 + Math.random() * 1.5 : 5.0 + Math.random() * 2;
         const vibG = audioCtx.createGain();
-        vibG.gain.value = freq * 0.007;
+        vibG.gain.value = freq * (wideVibrato ? 0.015 : 0.009);
+        // Vibrato fades in (doesn't start immediately — Chinese style)
+        vibG.gain.setValueAtTime(0, t);
+        vibG.gain.linearRampToValueAtTime(freq * (wideVibrato ? 0.015 : 0.009), t + dur * 0.3);
         vib.connect(vibG);
         vibG.connect(osc.frequency);
         vib.start(t);
         vib.stop(t + dur + 0.1);
 
-        // Breath noise
+        // Breath/air noise (softer than Western flute)
         const breathGain = audioCtx.createGain();
         breathGain.gain.setValueAtTime(0, t);
-        breathGain.gain.linearRampToValueAtTime(0.12, t + 0.04);
+        breathGain.gain.linearRampToValueAtTime(0.08, t + 0.03);
         breathGain.gain.linearRampToValueAtTime(0, t + dur);
         const breathFilt = audioCtx.createBiquadFilter();
         breathFilt.type = 'bandpass';
-        breathFilt.frequency.value = freq * 1.5;
-        breathFilt.Q.value = 1;
+        breathFilt.frequency.value = freq * 2;
+        breathFilt.Q.value = 1.5;
         breathFilt.connect(breathGain);
         breathGain.connect(dest);
         const breathSrc = audioCtx.createBufferSource();
@@ -871,15 +1037,251 @@
         osc.stop(t + dur + 0.05);
     }
 
-    // === ADAPTIVE AMBIENT ===
+    // === 古筝 GUZHENG (plucked zither — 21 strings) ===
+    // Bright, shimmering plucked tones with characteristic bends and tremolos
+    function startGuzheng(dest) {
+        guzhengGainNode = audioCtx.createGain();
+        guzhengGainNode.gain.value = activeMoodParams.guzhengVol;
+        guzhengGainNode.connect(dest);
+        musicNodes.push(guzhengGainNode);
+
+        function playGuzhengPhrase() {
+            if (!audioCtx || !musicPlaying) return;
+            const m = activeMoodParams;
+            if (m.guzhengVol <= 0) { setTimeout(playGuzhengPhrase, 5000); return; }
+            const scale = m.scale;
+            const now = audioCtx.currentTime;
+            const noteCount = randInt(m.guzhengNotes[0], m.guzhengNotes[1]);
+            let t = now + randFloat(0.1, 0.3);
+
+            // Guzheng often plays rapid arpeggios (刮奏 guāzòu) or single plucks
+            const style = randEl(['arpeggio', 'melody', 'tremolo', 'gliss']);
+
+            if (style === 'gliss' && noteCount >= 3) {
+                // 刮奏 guāzòu — rapid glissando across strings
+                const ascending = Math.random() < 0.5;
+                for (let i = 0; i < Math.min(noteCount, scale.length); i++) {
+                    const idx = ascending ? i : (scale.length - 1 - i);
+                    const safeIdx = Math.max(0, Math.min(scale.length - 1, idx));
+                    playGuzhengPluck(t, scale[safeIdx], guzhengGainNode, 0.35);
+                    t += randFloat(0.06, 0.12); // rapid cascade
+                }
+            } else if (style === 'tremolo') {
+                // 摇指 yáozhǐ — tremolo on single note
+                const freq = scale[randInt(0, scale.length - 1)];
+                const repeats = randInt(6, 12);
+                for (let i = 0; i < repeats; i++) {
+                    playGuzhengPluck(t, freq, guzhengGainNode, 0.25 * (1 - i * 0.03));
+                    t += randFloat(0.08, 0.12);
+                }
+            } else if (style === 'arpeggio') {
+                // Broken chord arpeggio
+                const startIdx = randInt(0, Math.max(0, scale.length - 3));
+                for (let i = 0; i < Math.min(noteCount, 4); i++) {
+                    const idx = Math.min(scale.length - 1, startIdx + i);
+                    playGuzhengPluck(t, scale[idx], guzhengGainNode, 0.4);
+                    t += randFloat(0.15, 0.35);
+                }
+            } else {
+                // Melodic single plucks
+                for (let i = 0; i < noteCount; i++) {
+                    const idx = randInt(0, scale.length - 1);
+                    const freq = scale[idx];
+                    const bend = Math.random() < 0.25; // 按音 ànyīn — press bend
+                    playGuzhengPluck(t, freq, guzhengGainNode, 0.4, bend);
+                    t += randFloat(0.3, 0.8);
+                }
+            }
+
+            const nextDelay = randFloat(m.guzhengInterval[0], m.guzhengInterval[1]) * 1000;
+            setTimeout(playGuzhengPhrase, nextDelay);
+        }
+
+        setTimeout(playGuzhengPhrase, 4000);
+    }
+
+    function playGuzhengPluck(t, freq, dest, vol, bend) {
+        const dur = randFloat(0.8, 1.8);
+        const noteGain = audioCtx.createGain();
+        // Sharp attack, natural decay (plucked string)
+        noteGain.gain.setValueAtTime(0, t);
+        noteGain.gain.linearRampToValueAtTime(vol, t + 0.005);
+        noteGain.gain.exponentialRampToValueAtTime(vol * 0.4, t + 0.15);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        noteGain.connect(dest);
+
+        // Fundamental
+        const osc = audioCtx.createOscillator();
+        osc.type = 'triangle'; // triangle gives guzheng-like softness
+        osc.frequency.setValueAtTime(freq, t);
+        if (bend) {
+            // 按音 ànyīn — characteristic guzheng pitch bend (up then back)
+            osc.frequency.linearRampToValueAtTime(freq * 1.06, t + 0.2);
+            osc.frequency.linearRampToValueAtTime(freq, t + 0.5);
+        }
+        osc.connect(noteGain);
+        osc.start(t);
+        osc.stop(t + dur + 0.05);
+
+        // 2nd harmonic (brighter guzheng character)
+        const osc2 = audioCtx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.value = freq * 2;
+        const g2 = audioCtx.createGain();
+        g2.gain.setValueAtTime(0, t);
+        g2.gain.linearRampToValueAtTime(vol * 0.25, t + 0.005);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.5);
+        osc2.connect(g2);
+        g2.connect(dest);
+        osc2.start(t);
+        osc2.stop(t + dur * 0.5);
+
+        // 3rd harmonic (shimmer)
+        const osc3 = audioCtx.createOscillator();
+        osc3.type = 'sine';
+        osc3.frequency.value = freq * 3;
+        const g3 = audioCtx.createGain();
+        g3.gain.setValueAtTime(0, t);
+        g3.gain.linearRampToValueAtTime(vol * 0.08, t + 0.005);
+        g3.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.3);
+        osc3.connect(g3);
+        g3.connect(dest);
+        osc3.start(t);
+        osc3.stop(t + dur * 0.3);
+
+        // String noise (pluck transient)
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(vol * 0.2, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        const nf = audioCtx.createBiquadFilter();
+        nf.type = 'bandpass';
+        nf.frequency.value = freq * 3;
+        nf.Q.value = 1;
+        nf.connect(ng);
+        ng.connect(dest);
+        const ns = audioCtx.createBufferSource();
+        ns.buffer = createNoiseBuffer(0.03);
+        ns.connect(nf);
+        ns.start(t);
+        ns.stop(t + 0.03);
+    }
+
+    // === 二胡 ERHU (bowed 2-string fiddle) ===
+    // Expressive, vocal quality with heavy vibrato and portamento
+    function startErhu(dest) {
+        erhuGainNode = audioCtx.createGain();
+        erhuGainNode.gain.value = activeMoodParams.erhuVol;
+        erhuGainNode.connect(dest);
+        musicNodes.push(erhuGainNode);
+
+        function playErhuPhrase() {
+            if (!audioCtx || !musicPlaying) return;
+            const m = activeMoodParams;
+            if (m.erhuVol <= 0 || m.erhuDur[1] <= 0) { setTimeout(playErhuPhrase, 8000); return; }
+            const scale = m.scale;
+            const now = audioCtx.currentTime;
+            let t = now + randFloat(0.2, 0.6);
+
+            // Erhu plays long, expressive melodic lines (1-3 notes per phrase)
+            const noteCount = randInt(1, 3);
+            let prevFreq = null;
+
+            for (let i = 0; i < noteCount; i++) {
+                const idx = randInt(0, scale.length - 1);
+                const freq = scale[idx];
+                const dur = randFloat(m.erhuDur[0], m.erhuDur[1]);
+                playErhuNote(t, freq, dur, erhuGainNode, 0.45, prevFreq);
+                prevFreq = freq;
+                t += dur + randFloat(0.1, 0.4);
+            }
+
+            const nextDelay = randFloat(m.erhuInterval[0], m.erhuInterval[1]) * 1000;
+            setTimeout(playErhuPhrase, nextDelay);
+        }
+
+        setTimeout(playErhuPhrase, 6000);
+    }
+
+    function playErhuNote(t, freq, dur, dest, vol, slideFrom) {
+        const noteGain = audioCtx.createGain();
+        // Bow attack — slower than plucked, with swell
+        noteGain.gain.setValueAtTime(0, t);
+        noteGain.gain.linearRampToValueAtTime(vol * 0.7, t + 0.08);
+        noteGain.gain.linearRampToValueAtTime(vol, t + dur * 0.3);
+        noteGain.gain.linearRampToValueAtTime(vol * 0.6, t + dur * 0.8);
+        noteGain.gain.linearRampToValueAtTime(0, t + dur);
+        noteGain.connect(dest);
+
+        // Main tone — sawtooth gives bowed string quality
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sawtooth';
+        if (slideFrom) {
+            // 滑音 huáyīn — portamento between notes (very characteristic of erhu)
+            osc.frequency.setValueAtTime(slideFrom, t);
+            osc.frequency.linearRampToValueAtTime(freq, t + 0.15);
+        } else {
+            osc.frequency.value = freq;
+        }
+
+        // Filter to tame harshness and create nasal erhu quality
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.value = freq * 3;
+        filt.Q.value = 2;
+        osc.connect(filt);
+
+        // Nasal resonance (characteristic 鼻音 bíyīn of erhu)
+        const nasalFilt = audioCtx.createBiquadFilter();
+        nasalFilt.type = 'peaking';
+        nasalFilt.frequency.value = freq * 2.5;
+        nasalFilt.Q.value = 5;
+        nasalFilt.gain.value = 6;
+        filt.connect(nasalFilt);
+        nasalFilt.connect(noteGain);
+
+        // Heavy vibrato (揉弦 róuxián) — erhu vibrato is wider and more expressive
+        const vib = audioCtx.createOscillator();
+        vib.type = 'sine';
+        vib.frequency.value = 5.0 + Math.random() * 1.5;
+        const vibG = audioCtx.createGain();
+        vibG.gain.setValueAtTime(0, t);
+        vibG.gain.linearRampToValueAtTime(freq * 0.018, t + dur * 0.25);
+        vib.connect(vibG);
+        vibG.connect(osc.frequency);
+        vib.start(t);
+        vib.stop(t + dur + 0.1);
+
+        // Bow noise (subtle scratchy quality)
+        const bowGain = audioCtx.createGain();
+        bowGain.gain.setValueAtTime(0, t);
+        bowGain.gain.linearRampToValueAtTime(0.04, t + 0.05);
+        bowGain.gain.linearRampToValueAtTime(0, t + dur);
+        const bowFilt = audioCtx.createBiquadFilter();
+        bowFilt.type = 'bandpass';
+        bowFilt.frequency.value = freq * 4;
+        bowFilt.Q.value = 0.5;
+        bowFilt.connect(bowGain);
+        bowGain.connect(dest);
+        const bowSrc = audioCtx.createBufferSource();
+        bowSrc.buffer = createNoiseBuffer(dur + 0.1);
+        bowSrc.connect(bowFilt);
+        bowSrc.start(t);
+        bowSrc.stop(t + dur);
+
+        osc.start(t);
+        osc.stop(t + dur + 0.05);
+    }
+
+    // === ADAPTIVE AMBIENT (nature sounds — wind through bamboo, distant water) ===
     function startAdaptiveAmbient(dest) {
         const m = activeMoodParams;
         ambGainNode = audioCtx.createGain();
         ambGainNode.gain.value = m.ambVol;
         ambGainNode.connect(dest);
 
+        // Bamboo wind / nature ambient layer
         ambNoiseNode = audioCtx.createBufferSource();
-        ambNoiseNode.buffer = createNoiseBuffer(6);
+        ambNoiseNode.buffer = createNoiseBuffer(8);
         ambNoiseNode.loop = true;
         ambFiltNode = audioCtx.createBiquadFilter();
         ambFiltNode.type = 'bandpass';
@@ -890,6 +1292,7 @@
         ambNoiseNode.start();
         musicNodes.push(ambNoiseNode);
 
+        // Slow breathing LFO (like wind through bamboo grove)
         ambLfo = audioCtx.createOscillator();
         ambLfo.type = 'sine';
         ambLfo.frequency.value = m.ambLfoRate;
@@ -899,9 +1302,36 @@
         ambLfoGain.connect(ambGainNode.gain);
         ambLfo.start();
         musicNodes.push(ambLfo);
+
+        // Optional: distant water/stream sound (higher frequency band)
+        const waterGain = audioCtx.createGain();
+        waterGain.gain.value = m.ambVol * 0.3;
+        waterGain.connect(dest);
+        const waterNoise = audioCtx.createBufferSource();
+        waterNoise.buffer = createNoiseBuffer(10);
+        waterNoise.loop = true;
+        const waterFilt = audioCtx.createBiquadFilter();
+        waterFilt.type = 'bandpass';
+        waterFilt.frequency.value = 2500;
+        waterFilt.Q.value = 0.3;
+        waterNoise.connect(waterFilt);
+        waterFilt.connect(waterGain);
+        waterNoise.start();
+        musicNodes.push(waterNoise);
+
+        // Water LFO (gentle babbling)
+        const waterLfo = audioCtx.createOscillator();
+        waterLfo.type = 'sine';
+        waterLfo.frequency.value = 0.15;
+        const waterLfoG = audioCtx.createGain();
+        waterLfoG.gain.value = m.ambVol * 0.15;
+        waterLfo.connect(waterLfoG);
+        waterLfoG.connect(waterGain.gain);
+        waterLfo.start();
+        musicNodes.push(waterLfo);
     }
 
-    // --- SOUND EFFECTS ---
+    // --- SOUND EFFECTS (Chinese-themed) ---
     function sfx(type) {
         if (!audioCtx || !soundEnabled || !audioStarted) return;
         try {
@@ -923,29 +1353,41 @@
     }
 
     function sfxSpeak() {
-        // Vocal grunt/utterance
+        // Tonal Mandarin-like vocal with characteristic rising/falling tones
         const t = audioCtx.currentTime;
         const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0.3, t);
-        g.gain.linearRampToValueAtTime(0.35, t + 0.05);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        g.gain.setValueAtTime(0.25, t);
+        g.gain.linearRampToValueAtTime(0.3, t + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
         g.connect(audioMaster);
 
-        const baseF = randFloat(110, 160);
+        // Mandarin has 4 tones — simulate one randomly
+        const baseF = randFloat(130, 180);
+        const tone = randInt(1, 4);
         const osc = audioCtx.createOscillator();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(baseF, t);
-        osc.frequency.linearRampToValueAtTime(baseF * randFloat(0.8, 1.3), t + 0.15);
-        osc.frequency.linearRampToValueAtTime(baseF * 0.9, t + 0.25);
+        if (tone === 1) { // high flat
+            osc.frequency.linearRampToValueAtTime(baseF * 1.2, t + 0.05);
+            osc.frequency.setValueAtTime(baseF * 1.2, t + 0.3);
+        } else if (tone === 2) { // rising
+            osc.frequency.linearRampToValueAtTime(baseF * 0.9, t + 0.05);
+            osc.frequency.linearRampToValueAtTime(baseF * 1.35, t + 0.3);
+        } else if (tone === 3) { // dipping
+            osc.frequency.linearRampToValueAtTime(baseF * 0.75, t + 0.15);
+            osc.frequency.linearRampToValueAtTime(baseF * 1.1, t + 0.3);
+        } else { // falling
+            osc.frequency.linearRampToValueAtTime(baseF * 1.3, t + 0.03);
+            osc.frequency.linearRampToValueAtTime(baseF * 0.7, t + 0.3);
+        }
 
-        // Formant filter (vowel-like)
         const f1 = audioCtx.createBiquadFilter();
         f1.type = 'bandpass';
-        f1.frequency.value = randEl([400, 600, 800]);
+        f1.frequency.value = randEl([500, 700, 900]);
         f1.Q.value = 5;
         const f2 = audioCtx.createBiquadFilter();
         f2.type = 'bandpass';
-        f2.frequency.value = randEl([1200, 1600, 2000]);
+        f2.frequency.value = randEl([1400, 1800, 2200]);
         f2.Q.value = 5;
 
         osc.connect(f1);
@@ -953,193 +1395,198 @@
         f1.connect(g);
         f2.connect(g);
         osc.start(t);
-        osc.stop(t + 0.3);
+        osc.stop(t + 0.35);
     }
 
     function sfxRespond() {
-        // Higher pitched, questioning vocal
+        // Rising tone (like Mandarin 2nd tone — questioning/acknowledging)
         const t = audioCtx.currentTime;
         const g = audioCtx.createGain();
         g.gain.setValueAtTime(0.2, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
         g.connect(audioMaster);
 
-        const baseF = randFloat(180, 260);
+        const baseF = randFloat(200, 280);
         const osc = audioCtx.createOscillator();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(baseF, t);
-        osc.frequency.linearRampToValueAtTime(baseF * 1.3, t + 0.2);
+        osc.frequency.setValueAtTime(baseF * 0.85, t);
+        osc.frequency.linearRampToValueAtTime(baseF * 1.4, t + 0.25);
 
         const f1 = audioCtx.createBiquadFilter();
         f1.type = 'bandpass';
-        f1.frequency.value = 700;
+        f1.frequency.value = 800;
         f1.Q.value = 4;
         osc.connect(f1);
         f1.connect(g);
         osc.start(t);
-        osc.stop(t + 0.25);
+        osc.stop(t + 0.3);
+
+        // Small guzheng pluck accent
+        const pluckOsc = audioCtx.createOscillator();
+        pluckOsc.type = 'triangle';
+        pluckOsc.frequency.value = randEl([523.3, 587.3, 392]);
+        const pluckG = audioCtx.createGain();
+        pluckG.gain.setValueAtTime(0.12, t);
+        pluckG.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        pluckOsc.connect(pluckG);
+        pluckG.connect(audioMaster);
+        pluckOsc.start(t);
+        pluckOsc.stop(t + 0.3);
     }
 
     function sfxLearn() {
-        // Bright ascending chime — "aha!" moment
+        // Pentatonic ascending chime — like temple bells (磬 qing)
         const t = audioCtx.currentTime;
         const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0.35, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        g.gain.setValueAtTime(0.3, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
         g.connect(audioMaster);
 
-        [523, 659, 784].forEach((freq, i) => {
+        // C-D-E-G-A pentatonic ascending — 宫商角徵羽
+        [523.3, 587.3, 659.3, 784, 880].forEach((freq, i) => {
+            if (i > 2) return; // just first 3 for brevity
             const osc = audioCtx.createOscillator();
             osc.type = 'sine';
             osc.frequency.value = freq;
             const ng = audioCtx.createGain();
-            ng.gain.setValueAtTime(0, t + i * 0.1);
-            ng.gain.linearRampToValueAtTime(0.4, t + i * 0.1 + 0.02);
-            ng.gain.exponentialRampToValueAtTime(0.001, t + i * 0.1 + 0.6);
+            ng.gain.setValueAtTime(0, t + i * 0.12);
+            ng.gain.linearRampToValueAtTime(0.35, t + i * 0.12 + 0.01);
+            ng.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.8);
             osc.connect(ng);
             ng.connect(g);
-            osc.start(t + i * 0.1);
-            osc.stop(t + i * 0.1 + 0.6);
+            osc.start(t + i * 0.12);
+            osc.stop(t + i * 0.12 + 0.8);
+            // Overtone shimmer (bell quality)
+            const osc2 = audioCtx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.value = freq * 2.5;
+            const ng2 = audioCtx.createGain();
+            ng2.gain.setValueAtTime(0, t + i * 0.12);
+            ng2.gain.linearRampToValueAtTime(0.08, t + i * 0.12 + 0.01);
+            ng2.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.4);
+            osc2.connect(ng2);
+            ng2.connect(g);
+            osc2.start(t + i * 0.12);
+            osc2.stop(t + i * 0.12 + 0.4);
         });
     }
 
     function sfxEat() {
-        // Crunching/chewing
+        // Chopstick clicks + chewing (筷子 kuàizi)
         const t = audioCtx.currentTime;
+        // Chopstick click first
+        const cg = audioCtx.createGain();
+        cg.gain.setValueAtTime(0.15, t);
+        cg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        cg.connect(audioMaster);
+        const cosc = audioCtx.createOscillator();
+        cosc.type = 'triangle';
+        cosc.frequency.setValueAtTime(2200, t);
+        cosc.frequency.exponentialRampToValueAtTime(1800, t + 0.02);
+        cosc.connect(cg);
+        cosc.start(t);
+        cosc.stop(t + 0.04);
+        // Chewing sounds
         for (let i = 0; i < 3; i++) {
-            const ct = t + i * 0.12;
+            const ct = t + 0.06 + i * 0.11;
             const g = audioCtx.createGain();
-            g.gain.setValueAtTime(0.2, ct);
-            g.gain.exponentialRampToValueAtTime(0.001, ct + 0.08);
+            g.gain.setValueAtTime(0.18, ct);
+            g.gain.exponentialRampToValueAtTime(0.001, ct + 0.07);
             const filt = audioCtx.createBiquadFilter();
             filt.type = 'bandpass';
-            filt.frequency.value = 1500 + Math.random() * 1000;
-            filt.Q.value = 1;
+            filt.frequency.value = 1200 + Math.random() * 800;
+            filt.Q.value = 1.5;
             filt.connect(g);
             g.connect(audioMaster);
             const ns = audioCtx.createBufferSource();
-            ns.buffer = createNoiseBuffer(0.08);
+            ns.buffer = createNoiseBuffer(0.07);
             ns.connect(filt);
             ns.start(ct);
-            ns.stop(ct + 0.08);
+            ns.stop(ct + 0.07);
         }
     }
 
     function sfxDrink() {
-        // Water gulping
+        // Tea sipping (品茶 pǐnchá) — gentler, ceramic cup clink + sip
         const t = audioCtx.currentTime;
+        // Ceramic cup clink
+        const clinkG = audioCtx.createGain();
+        clinkG.gain.setValueAtTime(0.12, t);
+        clinkG.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        clinkG.connect(audioMaster);
+        const clinkOsc = audioCtx.createOscillator();
+        clinkOsc.type = 'sine';
+        clinkOsc.frequency.value = 1800 + Math.random() * 400;
+        clinkOsc.connect(clinkG);
+        clinkOsc.start(t);
+        clinkOsc.stop(t + 0.2);
+        // Sip sounds
         for (let i = 0; i < 2; i++) {
-            const gt = t + i * 0.2;
+            const gt = t + 0.1 + i * 0.18;
             const g = audioCtx.createGain();
-            g.gain.setValueAtTime(0.25, gt);
-            g.gain.exponentialRampToValueAtTime(0.001, gt + 0.15);
+            g.gain.setValueAtTime(0.2, gt);
+            g.gain.exponentialRampToValueAtTime(0.001, gt + 0.12);
             g.connect(audioMaster);
-
             const osc = audioCtx.createOscillator();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(300 + i * 40, gt);
-            osc.frequency.exponentialRampToValueAtTime(150, gt + 0.1);
+            osc.frequency.setValueAtTime(280 + i * 30, gt);
+            osc.frequency.exponentialRampToValueAtTime(160, gt + 0.08);
             osc.connect(g);
             osc.start(gt);
-            osc.stop(gt + 0.15);
-
-            // Bubble noise
+            osc.stop(gt + 0.12);
+            // Liquid noise
             const ng = audioCtx.createGain();
-            ng.gain.setValueAtTime(0.1, gt);
-            ng.gain.exponentialRampToValueAtTime(0.001, gt + 0.1);
+            ng.gain.setValueAtTime(0.08, gt);
+            ng.gain.exponentialRampToValueAtTime(0.001, gt + 0.08);
             const filt = audioCtx.createBiquadFilter();
             filt.type = 'bandpass';
-            filt.frequency.value = 500;
+            filt.frequency.value = 600;
             filt.Q.value = 3;
             filt.connect(ng);
             ng.connect(audioMaster);
             const ns = audioCtx.createBufferSource();
-            ns.buffer = createNoiseBuffer(0.1);
+            ns.buffer = createNoiseBuffer(0.08);
             ns.connect(filt);
             ns.start(gt);
-            ns.stop(gt + 0.1);
+            ns.stop(gt + 0.08);
         }
     }
 
     function sfxSleep() {
-        // Soft descending tone
-        const t = audioCtx.currentTime;
-        const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0.15, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-        g.connect(audioMaster);
-
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(300, t);
-        osc.frequency.exponentialRampToValueAtTime(100, t + 0.5);
-        osc.connect(g);
-        osc.start(t);
-        osc.stop(t + 0.6);
-    }
-
-    function sfxCraft() {
-        // Tapping / hammering stone
-        const t = audioCtx.currentTime;
-        for (let i = 0; i < 2; i++) {
-            const ct = t + i * 0.15;
-            const g = audioCtx.createGain();
-            g.gain.setValueAtTime(0.35, ct);
-            g.gain.exponentialRampToValueAtTime(0.001, ct + 0.1);
-            g.connect(audioMaster);
-
-            const osc = audioCtx.createOscillator();
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(600 + i * 200, ct);
-            osc.frequency.exponentialRampToValueAtTime(200, ct + 0.06);
-            osc.connect(g);
-            osc.start(ct);
-            osc.stop(ct + 0.1);
-        }
-    }
-
-    function sfxChop() {
-        // Wood chopping impact
-        const t = audioCtx.currentTime;
-        const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0.4, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        g.connect(audioMaster);
-
-        const ns = audioCtx.createBufferSource();
-        ns.buffer = createNoiseBuffer(0.15);
-        const filt = audioCtx.createBiquadFilter();
-        filt.type = 'bandpass';
-        filt.frequency.value = 800;
-        filt.Q.value = 1.5;
-        ns.connect(filt);
-        filt.connect(g);
-        ns.start(t);
-        ns.stop(t + 0.15);
-
-        // Thud
-        const og = audioCtx.createGain();
-        og.gain.setValueAtTime(0.3, t);
-        og.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-        og.connect(audioMaster);
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(200, t);
-        osc.frequency.exponentialRampToValueAtTime(60, t + 0.08);
-        osc.connect(og);
-        osc.start(t);
-        osc.stop(t + 0.1);
-    }
-
-    function sfxFire() {
-        // Crackling
+        // Soft descending pentatonic lullaby tone + gentle guqin-like note
         const t = audioCtx.currentTime;
         const g = audioCtx.createGain();
         g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+        g.connect(audioMaster);
+        // Descending pentatonic: G → E → C
+        [392, 329.6, 261.6].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0, t + i * 0.25);
+            ng.gain.linearRampToValueAtTime(0.15, t + i * 0.25 + 0.05);
+            ng.gain.exponentialRampToValueAtTime(0.001, t + i * 0.25 + 0.5);
+            osc.connect(ng);
+            ng.connect(g);
+            osc.start(t + i * 0.25);
+            osc.stop(t + i * 0.25 + 0.5);
+        });
+    }
+
+    function sfxCraft() {
+        // Ink grinding / calligraphy brush (研墨 yánmò) — soft circular grinding
+        const t = audioCtx.currentTime;
+        // Grinding sound
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.18, t);
+        g.gain.linearRampToValueAtTime(0.22, t + 0.15);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
         const filt = audioCtx.createBiquadFilter();
-        filt.type = 'highpass';
-        filt.frequency.value = 3000;
+        filt.type = 'bandpass';
+        filt.frequency.value = 600;
+        filt.Q.value = 2;
         filt.connect(g);
         g.connect(audioMaster);
         const ns = audioCtx.createBufferSource();
@@ -1147,19 +1594,100 @@
         ns.connect(filt);
         ns.start(t);
         ns.stop(t + 0.4);
+        // Stone clink accent
+        const sg = audioCtx.createGain();
+        sg.gain.setValueAtTime(0.15, t);
+        sg.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+        sg.connect(audioMaster);
+        const sosc = audioCtx.createOscillator();
+        sosc.type = 'triangle';
+        sosc.frequency.setValueAtTime(900, t);
+        sosc.frequency.exponentialRampToValueAtTime(500, t + 0.05);
+        sosc.connect(sg);
+        sosc.start(t);
+        sosc.stop(t + 0.08);
+    }
+
+    function sfxChop() {
+        // Bamboo chopping (砍竹 kǎnzhú) — hollow bamboo impact
+        const t = audioCtx.currentTime;
+        // Bamboo resonance (hollow, higher than wood)
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.35, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        g.connect(audioMaster);
+        const osc = audioCtx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, t);
+        osc.frequency.exponentialRampToValueAtTime(250, t + 0.1);
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = 'bandpass';
+        filt.frequency.value = 800;
+        filt.Q.value = 3;
+        osc.connect(filt);
+        filt.connect(g);
+        osc.start(t);
+        osc.stop(t + 0.18);
+        // Impact crack
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(0.3, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        const nf = audioCtx.createBiquadFilter();
+        nf.type = 'highpass';
+        nf.frequency.value = 2000;
+        nf.connect(ng);
+        ng.connect(audioMaster);
+        const ns = audioCtx.createBufferSource();
+        ns.buffer = createNoiseBuffer(0.05);
+        ns.connect(nf);
+        ns.start(t);
+        ns.stop(t + 0.05);
+    }
+
+    function sfxFire() {
+        // Wok cooking / charcoal crackling (炒菜 chǎocài)
+        const t = audioCtx.currentTime;
+        // Sizzle
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.14, t);
+        g.gain.linearRampToValueAtTime(0.18, t + 0.1);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = 'highpass';
+        filt.frequency.value = 2500;
+        filt.connect(g);
+        g.connect(audioMaster);
+        const ns = audioCtx.createBufferSource();
+        ns.buffer = createNoiseBuffer(0.5);
+        ns.connect(filt);
+        ns.start(t);
+        ns.stop(t + 0.5);
+        // Charcoal pop
+        const pg = audioCtx.createGain();
+        pg.gain.setValueAtTime(0.1, t + 0.15);
+        pg.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        pg.connect(audioMaster);
+        const posc = audioCtx.createOscillator();
+        posc.type = 'sine';
+        posc.frequency.setValueAtTime(400, t + 0.15);
+        posc.frequency.exponentialRampToValueAtTime(100, t + 0.18);
+        posc.connect(pg);
+        posc.start(t + 0.15);
+        posc.stop(t + 0.2);
     }
 
     function sfxGather() {
-        // Rustling leaves
+        // Bamboo leaves rustling / picking herbs (采药 cǎiyào)
         const t = audioCtx.currentTime;
+        // Leaf rustle
         const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0.15, t);
-        g.gain.linearRampToValueAtTime(0.2, t + 0.1);
+        g.gain.setValueAtTime(0.12, t);
+        g.gain.linearRampToValueAtTime(0.18, t + 0.08);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
         const filt = audioCtx.createBiquadFilter();
         filt.type = 'bandpass';
-        filt.frequency.value = 3500;
-        filt.Q.value = 0.5;
+        filt.frequency.value = 4000;
+        filt.Q.value = 0.4;
         filt.connect(g);
         g.connect(audioMaster);
         const ns = audioCtx.createBufferSource();
@@ -1167,45 +1695,87 @@
         ns.connect(filt);
         ns.start(t);
         ns.stop(t + 0.3);
+        // Soft pluck (picking sound)
+        const pg = audioCtx.createGain();
+        pg.gain.setValueAtTime(0.1, t + 0.05);
+        pg.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        pg.connect(audioMaster);
+        const posc = audioCtx.createOscillator();
+        posc.type = 'triangle';
+        posc.frequency.setValueAtTime(1200, t + 0.05);
+        posc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+        posc.connect(pg);
+        posc.start(t + 0.05);
+        posc.stop(t + 0.15);
     }
 
     function sfxFish() {
-        // Water splash
+        // Fishing splash + line (钓鱼 diàoyú)
         const t = audioCtx.currentTime;
+        // Line cast whoosh
+        const wg = audioCtx.createGain();
+        wg.gain.setValueAtTime(0.1, t);
+        wg.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        const wf = audioCtx.createBiquadFilter();
+        wf.type = 'bandpass';
+        wf.frequency.setValueAtTime(3000, t);
+        wf.frequency.exponentialRampToValueAtTime(1000, t + 0.1);
+        wf.Q.value = 0.5;
+        wf.connect(wg);
+        wg.connect(audioMaster);
+        const wns = audioCtx.createBufferSource();
+        wns.buffer = createNoiseBuffer(0.15);
+        wns.connect(wf);
+        wns.start(t);
+        wns.stop(t + 0.15);
+        // Water splash
         const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0.25, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        g.gain.setValueAtTime(0.22, t + 0.1);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
         g.connect(audioMaster);
-
         const ns = audioCtx.createBufferSource();
         ns.buffer = createNoiseBuffer(0.3);
         const filt = audioCtx.createBiquadFilter();
         filt.type = 'bandpass';
-        filt.frequency.setValueAtTime(2000, t);
-        filt.frequency.exponentialRampToValueAtTime(400, t + 0.2);
+        filt.frequency.setValueAtTime(2000, t + 0.1);
+        filt.frequency.exponentialRampToValueAtTime(400, t + 0.3);
         filt.Q.value = 1;
         ns.connect(filt);
         filt.connect(g);
-        ns.start(t);
-        ns.stop(t + 0.3);
+        ns.start(t + 0.1);
+        ns.stop(t + 0.4);
     }
 
     function sfxStep() {
-        // Soft footstep on dirt
+        // Soft footstep on stone/gravel path (石路 shílù)
         const t = audioCtx.currentTime;
         const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0.08, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        g.gain.setValueAtTime(0.07, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
         const filt = audioCtx.createBiquadFilter();
         filt.type = 'lowpass';
-        filt.frequency.value = 600;
+        filt.frequency.value = 800;
         filt.connect(g);
         g.connect(audioMaster);
         const ns = audioCtx.createBufferSource();
-        ns.buffer = createNoiseBuffer(0.06);
+        ns.buffer = createNoiseBuffer(0.07);
         ns.connect(filt);
         ns.start(t);
-        ns.stop(t + 0.06);
+        ns.stop(t + 0.07);
+        // Small gravel crunch
+        const cg = audioCtx.createGain();
+        cg.gain.setValueAtTime(0.04, t + 0.01);
+        cg.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        const cf = audioCtx.createBiquadFilter();
+        cf.type = 'highpass';
+        cf.frequency.value = 4000;
+        cf.connect(cg);
+        cg.connect(audioMaster);
+        const cns = audioCtx.createBufferSource();
+        cns.buffer = createNoiseBuffer(0.04);
+        cns.connect(cf);
+        cns.start(t + 0.01);
+        cns.stop(t + 0.05);
     }
 
     // Map action IDs to SFX types
