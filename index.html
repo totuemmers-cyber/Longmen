@@ -2289,6 +2289,10 @@
             allWP.push(...buildingWP);
         }
         character.waypoints = allWP;
+        // Reset stuck tracking so new movement starts fresh
+        character.stuckTimer = 0;
+        character.lastMoveX = character.x;
+        character.lastMoveY = character.y;
     }
 
     // Ensure NPCs don't spawn inside the river
@@ -3187,10 +3191,8 @@
             // Stuck detection: if barely moved in last ~2 seconds, skip waypoint or give up
             const movedDist = Math.sqrt((this.x - this.lastMoveX) ** 2 + (this.y - this.lastMoveY) ** 2);
             this.stuckTimer += dt;
-            if (this.stuckTimer > 30) {
+            if (this.stuckTimer > 80) {
                 this.stuckTimer = 0;
-                this.lastMoveX = this.x;
-                this.lastMoveY = this.y;
                 if (movedDist < 5) {
                     // Stuck! Skip current waypoint or give up entirely
                     if (this.waypoints && this.waypoints.length > 0) {
@@ -3198,8 +3200,9 @@
                     } else {
                         return true; // give up, treat as arrived
                     }
-                    return false;
                 }
+                this.lastMoveX = this.x;
+                this.lastMoveY = this.y;
             }
             const spd = this.moveSpeed * dt * 0.4;
             const step = Math.min(spd, dist);
@@ -5750,12 +5753,15 @@
                         : 'Folgt ' + speaker.name;
 
                     if (distToSpeaker > learner.hearingRange * 0.5) {
-                        // Move toward speaker
+                        // Move toward speaker — only recalculate target when speaker moved significantly
                         const angle = Math.atan2(speaker.y - learner.y, speaker.x - learner.x);
                         const followDist = 30 + Math.random() * 25;
                         let ftx = Math.max(30, Math.min(WORLD_W - 30, speaker.x - Math.cos(angle) * followDist));
                         let fty = Math.max(30, Math.min(WORLD_H - 30, speaker.y - Math.sin(angle) * followDist));
-                        setTargetWithPath(learner, ftx, fty);
+                        const targetChanged = Math.abs(ftx - learner.targetX) > 30 || Math.abs(fty - learner.targetY) > 30;
+                        if (targetChanged || learner.waypoints.length === 0) {
+                            setTargetWithPath(learner, ftx, fty);
+                        }
                         learner.moveToward(learner.targetX, learner.targetY, dt);
                         learner.facing = angle;
                     } else if (distToSpeaker > 25) {
