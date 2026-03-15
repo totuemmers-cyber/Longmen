@@ -5747,7 +5747,7 @@
     let lastWildlifeSeason = null;
 
     const ANIMAL_TYPES = [
-        { type: 'crane',     seasons: ['spring','summer','autumn'], speed: 0.5, fleeRange: 90, zonePref: 'water', flockSize: 1 },
+        { type: 'crane',     seasons: ['spring','summer','autumn'], speed: 0.5, fleeRange: 90, zonePref: 'river', flockSize: 1 },
         { type: 'magpie',    seasons: ['spring','summer'],          speed: 1.2, fleeRange: 70, zonePref: 'sky',   flockSize: 3 },
         { type: 'rabbit',    seasons: ['spring','summer','autumn','winter'], speed: 1.0, fleeRange: 60, zonePref: 'land', flockSize: 1 },
         { type: 'koi',       seasons: ['spring','summer','autumn'], speed: 0.3, fleeRange: 20, zonePref: 'water', flockSize: 2 },
@@ -5808,9 +5808,13 @@
                 if (this.wanderTimer <= 0) {
                     this.wanderTimer = randFloat(80, 250);
                     if (this.type === 'koi') {
-                        // Stay near water
+                        // Stay in pond
                         this.targetX = WATER_ZONE.x + randFloat(-WATER_ZONE.r, WATER_ZONE.r);
                         this.targetY = WATER_ZONE.y + randFloat(-WATER_ZONE.r * 0.6, WATER_ZONE.r * 0.6);
+                    } else if (this.type === 'crane') {
+                        // Stay near river
+                        this.targetX = randFloat(690, 790);
+                        this.targetY = Math.max(60, Math.min(580, this.y + randFloat(-80, 80)));
                     } else {
                         this.targetX = Math.max(20, Math.min(WORLD_W - 20, this.x + randFloat(-100, 100)));
                         this.targetY = Math.max(20, Math.min(WORLD_H - 20, this.y + randFloat(-60, 60)));
@@ -5842,12 +5846,17 @@
         wildlife = [];
         for (const def of ANIMAL_TYPES) {
             if (!def.seasons.includes(season)) continue;
-            const count = def.flockSize + (season === 'spring' ? 1 : 0);
+            let count = def.flockSize + (season === 'spring' ? 1 : 0);
+            if (def.type === 'koi') count = Math.min(count, 2); // pond is small
             for (let i = 0; i < count; i++) {
                 let x, y;
                 if (def.zonePref === 'water') {
                     x = WATER_ZONE.x + randFloat(-WATER_ZONE.r, WATER_ZONE.r);
                     y = WATER_ZONE.y + randFloat(-WATER_ZONE.r * 0.5, WATER_ZONE.r * 0.5);
+                } else if (def.zonePref === 'river') {
+                    // Along the drawn river (x ~710-790)
+                    x = randFloat(710, 780);
+                    y = randFloat(100, 550);
                 } else if (def.zonePref === 'sky') {
                     x = randFloat(50, WORLD_W - 50);
                     y = randFloat(30, WORLD_H * 0.4);
