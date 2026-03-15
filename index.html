@@ -2092,7 +2092,7 @@
         { id: 'shrine1',    type: 'shrine',      x: 150, y: 450, w: 40, h: 50, label: '神龛' },
         { id: 'lantern1',   type: 'lantern_post',x: 440, y: 180, w: 15, h: 35, label: '灯' },
         { id: 'rice1',      type: 'rice_paddy',  x: 750, y: 280, w: 70, h: 50, label: '稻田' },
-        { id: 'river1',     type: 'river',       x: 770, y: 460, w: 160, h: 180, label: '河' },
+        { id: 'river1',     type: 'river',       x: 420, y: 560, w: 70, h: 50, label: '河' },
         { id: 'dock1',      type: 'dock',        x: 720, y: 530, w: 40, h: 30, label: '码头' },
         { id: 'lotus1',     type: 'lotus_pond',  x: 120, y: 530, w: 50, h: 35, label: '莲池' },
         { id: 'flower1',    type: 'flower',      x: 200, y: 380, w: 30, h: 30, label: '花' },
@@ -4339,34 +4339,32 @@
             }
 
             case 'river': {
-                // Wide blue water body with animated ripples
+                // Small pond south of the village
                 ctx.fillStyle = '#2a5a8a';
-                ctx.fillRect(x - w/2, y - h/2, w, h);
-                // Lighter streaks
-                ctx.fillStyle = 'rgba(60,120,180,0.3)';
-                ctx.fillRect(x - w/2, y - h/4, w, h/6);
-                ctx.fillRect(x - w/2, y + h/8, w, h/6);
+                ctx.beginPath();
+                ctx.ellipse(x, y, w/2, h/2, 0.1, 0, Math.PI * 2);
+                ctx.fill();
+                // Lighter inner highlight
+                ctx.fillStyle = 'rgba(60,130,190,0.25)';
+                ctx.beginPath();
+                ctx.ellipse(x - w*0.08, y - h*0.08, w*0.32, h*0.28, 0.1, 0, Math.PI * 2);
+                ctx.fill();
                 // Animated ripples
                 const rvt = gameTick * 0.03;
                 ctx.strokeStyle = 'rgba(100,180,220,0.3)';
                 ctx.lineWidth = canvasScale;
-                for (let i = 0; i < 5; i++) {
+                for (let i = 0; i < 3; i++) {
                     ctx.beginPath();
-                    const rx = x - w/3 + i * w/4 + Math.sin(rvt + i*1.5)*5*canvasScale;
-                    const ry = y - h/4 + (i % 3) * h/4;
-                    ctx.ellipse(rx, ry, (6 + Math.sin(rvt+i)*2)*canvasScale, (2+Math.sin(rvt+i))*canvasScale, 0, 0, Math.PI*2);
+                    const rx = x + Math.sin(rvt + i * 2.1) * w * 0.15;
+                    const ry = y + Math.cos(rvt + i * 1.7) * h * 0.15;
+                    ctx.ellipse(rx, ry, (4 + Math.sin(rvt+i)*1.5)*canvasScale, (1.5+Math.sin(rvt+i)*0.5)*canvasScale, 0, 0, Math.PI*2);
                     ctx.stroke();
                 }
-                // Shore edges
-                ctx.strokeStyle = '#4a7a5a';
-                ctx.lineWidth = 2*canvasScale;
+                // Earthy shore edge
+                ctx.strokeStyle = '#6a8a5a';
+                ctx.lineWidth = 1.5*canvasScale;
                 ctx.beginPath();
-                ctx.moveTo(x - w/2, y - h/2);
-                ctx.lineTo(x + w/2, y - h/2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(x - w/2, y + h/2);
-                ctx.lineTo(x + w/2, y + h/2);
+                ctx.ellipse(x, y, w/2 + canvasScale, h/2 + canvasScale, 0.1, 0, Math.PI * 2);
                 ctx.stroke();
                 break;
             }
