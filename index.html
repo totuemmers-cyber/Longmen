@@ -2908,6 +2908,9 @@
     let weatherIntensity = 0;
     let targetWeatherIntensity = 0;
 
+    // Atmospheric particle system (decorative, season/time-dependent)
+    let atmosParticles = [];
+
     // Object click tooltip
     let objectTooltip = null;
 
@@ -7300,6 +7303,250 @@
         }
     }
 
+    // ============================================================
+    //  ATMOSPHERIC PARTICLES (decorative season/time effects)
+    // ============================================================
+    function updateAtmospheric(dt) {
+        const season = getSeason();
+        const isNight = gameHour >= 20 || gameHour < 5;
+        const isDusk  = gameHour >= 18 && gameHour < 20;
+        const isDawn  = gameHour >= 5 && gameHour < 7;
+
+        // --- Fireflies (night, near water) ---
+        if (isNight && atmosParticles.filter(p => p.kind === 'firefly').length < 18) {
+            if (Math.random() < 0.04 * dt) {
+                // Spawn near water features: lotus pond (120,530), fish pond (180,520), river area
+                const spots = [[120,530],[180,520],[420,560],[650,400],[850,450]];
+                const [sx,sy] = spots[Math.floor(Math.random()*spots.length)];
+                atmosParticles.push({
+                    kind: 'firefly', x: sx + randFloat(-40,40), y: sy + randFloat(-30,30),
+                    phase: randFloat(0, Math.PI*2), speed: randFloat(0.15, 0.35),
+                    drift: randFloat(-0.3, 0.3), radius: randFloat(15, 30),
+                    life: randFloat(300, 600), maxLife: 0
+                });
+                const p = atmosParticles[atmosParticles.length-1];
+                p.maxLife = p.life;
+            }
+        }
+
+        // --- Cherry blossom petals (spring) ---
+        if (season === 'spring' && atmosParticles.filter(p => p.kind === 'blossom').length < 25) {
+            if (Math.random() < 0.06 * dt) {
+                atmosParticles.push({
+                    kind: 'blossom', x: randFloat(-20, WORLD_W + 20), y: randFloat(-20, -5),
+                    vx: randFloat(-0.3, -0.1), vy: randFloat(0.3, 0.7),
+                    rot: randFloat(0, Math.PI*2), rotSpeed: randFloat(-0.03, 0.03),
+                    size: randFloat(2, 4), phase: randFloat(0, Math.PI*2),
+                    color: randEl(['#f0a0b0','#e890a0','#f5b0c0','#e8a0b8'])
+                });
+            }
+        }
+
+        // --- Autumn leaves ---
+        if (season === 'autumn' && atmosParticles.filter(p => p.kind === 'leaf').length < 15) {
+            if (Math.random() < 0.03 * dt) {
+                atmosParticles.push({
+                    kind: 'leaf', x: randFloat(-20, WORLD_W + 20), y: randFloat(-20, -5),
+                    vx: randFloat(0.5, 1.5), vy: randFloat(0.4, 0.8),
+                    rot: randFloat(0, Math.PI*2), rotSpeed: randFloat(-0.04, 0.04),
+                    size: randFloat(3, 5), color: randEl(['#c86830','#d89040','#b84020','#c8a030','#a06028'])
+                });
+            }
+        }
+
+        // --- Morning mist wisps (dawn) ---
+        if (isDawn && atmosParticles.filter(p => p.kind === 'mist').length < 12) {
+            if (Math.random() < 0.05 * dt) {
+                atmosParticles.push({
+                    kind: 'mist', x: randFloat(0, WORLD_W), y: randFloat(WORLD_H * 0.5, WORLD_H * 0.85),
+                    vx: randFloat(-0.08, 0.08), size: randFloat(50, 100),
+                    alpha: randFloat(0.04, 0.10), phase: randFloat(0, Math.PI*2),
+                    life: randFloat(200, 400), maxLife: 0
+                });
+                const p = atmosParticles[atmosParticles.length-1];
+                p.maxLife = p.life;
+            }
+        }
+
+        // --- Dusk embers / warm dust (dusk) ---
+        if (isDusk && atmosParticles.filter(p => p.kind === 'ember').length < 20) {
+            if (Math.random() < 0.06 * dt) {
+                atmosParticles.push({
+                    kind: 'ember', x: randFloat(0, WORLD_W), y: randFloat(WORLD_H * 0.2, WORLD_H * 0.8),
+                    vx: randFloat(-0.1, 0.3), vy: randFloat(-0.3, -0.1),
+                    size: randFloat(1, 2.5), alpha: randFloat(0.2, 0.5),
+                    life: randFloat(100, 250), maxLife: 0
+                });
+                const p = atmosParticles[atmosParticles.length-1];
+                p.maxLife = p.life;
+            }
+        }
+
+        // Update all particles
+        for (const p of atmosParticles) {
+            switch (p.kind) {
+                case 'firefly':
+                    p.phase += p.speed * dt * 0.05;
+                    p.x += Math.cos(p.phase * 2.3) * p.radius * 0.008 * dt + p.drift * dt * 0.3;
+                    p.y += Math.sin(p.phase * 1.7) * p.radius * 0.006 * dt;
+                    p.life -= dt;
+                    break;
+                case 'blossom':
+                    p.x += (p.vx + Math.sin(gameTick * 0.015 + p.phase) * 0.2) * dt;
+                    p.y += p.vy * dt;
+                    p.rot += p.rotSpeed * dt;
+                    break;
+                case 'leaf':
+                    p.x += (p.vx + Math.sin(gameTick * 0.01 + p.rot) * 0.5) * dt;
+                    p.y += p.vy * dt;
+                    p.rot += p.rotSpeed * dt;
+                    break;
+                case 'mist':
+                    p.x += p.vx * dt;
+                    p.phase += 0.008 * dt;
+                    p.life -= dt;
+                    break;
+                case 'ember':
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= dt;
+                    break;
+            }
+        }
+
+        // Remove dead / out-of-bounds
+        atmosParticles = atmosParticles.filter(p => {
+            if (p.life !== undefined && p.life <= 0) return false;
+            if (p.kind === 'blossom' || p.kind === 'leaf') {
+                return p.y < WORLD_H + 20 && p.x > -40 && p.x < WORLD_W + 40;
+            }
+            return true;
+        });
+    }
+
+    function drawAtmosphericEffects(ctx) {
+        const s = canvasScale;
+        const season = getSeason();
+        const isNight = gameHour >= 20 || gameHour < 5;
+        const isDusk  = gameHour >= 18 && gameHour < 20;
+
+        ctx.save();
+
+        // --- Fireflies ---
+        for (const p of atmosParticles) {
+            if (p.kind !== 'firefly') continue;
+            const glow = Math.sin(p.phase * 3.5) * 0.5 + 0.5; // pulsing
+            const fadeIn = Math.min(1, (p.maxLife - p.life) / 60);
+            const fadeOut = Math.min(1, p.life / 60);
+            const a = glow * 0.7 * fadeIn * fadeOut;
+            if (a < 0.01) continue;
+            // Outer glow
+            const grad = ctx.createRadialGradient(
+                p.x*s, p.y*s, 0, p.x*s, p.y*s, 8*s
+            );
+            grad.addColorStop(0, `rgba(180,220,80,${a * 0.3})`);
+            grad.addColorStop(1, 'rgba(180,220,80,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect((p.x-10)*s, (p.y-10)*s, 20*s, 20*s);
+            // Core
+            ctx.fillStyle = `rgba(220,255,120,${a})`;
+            ctx.beginPath();
+            ctx.arc(p.x*s, p.y*s, (1.2 + glow*0.8)*s, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // --- Cherry blossoms ---
+        for (const p of atmosParticles) {
+            if (p.kind !== 'blossom') continue;
+            ctx.save();
+            ctx.translate(p.x*s, p.y*s);
+            ctx.rotate(p.rot);
+            ctx.globalAlpha = 0.6;
+            // Petal shape (elongated ellipse)
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, p.size*s, p.size*0.5*s, 0, 0, Math.PI*2);
+            ctx.fill();
+            // Slight white highlight
+            ctx.fillStyle = 'rgba(255,230,240,0.4)';
+            ctx.beginPath();
+            ctx.ellipse(-p.size*0.2*s, -p.size*0.1*s, p.size*0.4*s, p.size*0.2*s, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // --- Autumn leaves ---
+        for (const p of atmosParticles) {
+            if (p.kind !== 'leaf') continue;
+            ctx.save();
+            ctx.translate(p.x*s, p.y*s);
+            ctx.rotate(p.rot);
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = p.color;
+            // Leaf shape
+            ctx.beginPath();
+            ctx.moveTo(0, -p.size*s);
+            ctx.quadraticCurveTo(p.size*0.7*s, -p.size*0.3*s, 0, p.size*s);
+            ctx.quadraticCurveTo(-p.size*0.7*s, -p.size*0.3*s, 0, -p.size*s);
+            ctx.fill();
+            // Vein
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+            ctx.lineWidth = 0.5*s;
+            ctx.beginPath();
+            ctx.moveTo(0, -p.size*s);
+            ctx.lineTo(0, p.size*s);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // --- Morning mist ---
+        for (const p of atmosParticles) {
+            if (p.kind !== 'mist') continue;
+            const fadeIn = Math.min(1, (p.maxLife - p.life) / 80);
+            const fadeOut = Math.min(1, p.life / 80);
+            const a = p.alpha * fadeIn * fadeOut;
+            ctx.globalAlpha = a;
+            ctx.fillStyle = '#d8d0c0';
+            ctx.beginPath();
+            const wobble = Math.sin(p.phase) * p.size * 0.15;
+            ctx.ellipse((p.x + wobble)*s, p.y*s, p.size*s, p.size*0.35*s, 0, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // --- Dusk embers ---
+        for (const p of atmosParticles) {
+            if (p.kind !== 'ember') continue;
+            const fadeOut = Math.min(1, p.life / 40);
+            const a = p.alpha * fadeOut;
+            ctx.globalAlpha = a;
+            ctx.fillStyle = '#e8a050';
+            ctx.beginPath();
+            ctx.arc(p.x*s, p.y*s, p.size*s, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        // --- Enhanced lantern glow at night / dusk ---
+        if (isNight || isDusk) {
+            const nightFactor = isNight ? 1.0 : (gameHour - 18) / 2;
+            ctx.save();
+            for (const obj of worldObjects) {
+                if (obj.type !== 'lantern_post') continue;
+                const lx = (obj.x + 8) * s;
+                const ly = (obj.y - obj.h/3 + 4) * s;
+                const r = 30 * s * nightFactor;
+                const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, r);
+                grad.addColorStop(0, `rgba(255,120,40,${0.18 * nightFactor})`);
+                grad.addColorStop(0.5, `rgba(255,90,30,${0.06 * nightFactor})`);
+                grad.addColorStop(1, 'rgba(255,80,20,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(lx - r, ly - r, r*2, r*2);
+            }
+            ctx.restore();
+        }
+    }
+
     function getWeatherLabel() {
         switch(currentWeather) {
             case 'rain': return 'Regen'; case 'snow': return 'Schnee';
@@ -7844,8 +8091,9 @@
             }
             if (proverbOverlay && !proverbOverlay.update(dt)) proverbOverlay = null;
 
-            // Update weather
+            // Update weather & atmospheric effects
             updateWeather(dt);
+            updateAtmospheric(dt);
 
             // Update object tooltip
             updateObjectTooltip(dt);
@@ -7882,6 +8130,9 @@
 
         // Day/night overlay
         drawDayNightOverlay(ctx);
+
+        // Atmospheric effects (under weather)
+        drawAtmosphericEffects(ctx);
 
         // Weather effects (on top of scene)
         drawWeatherEffects(ctx);
