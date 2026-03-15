@@ -4831,6 +4831,7 @@
         }
 
         if (candidates.length === 0) candidates = ACTION_DEFS.filter(a => a.priority === 'productive');
+        if (candidates.length === 0) candidates = ACTION_DEFS.slice(); // ultimate fallback: any action
 
         // Use spaced repetition: prefer actions not done recently
         // Curiosity boosts weight for never-done actions (more variety)
@@ -5370,6 +5371,12 @@
 
             case 'moving':
                 if (p.moveToward(p.targetX, p.targetY, dt)) {
+                    if (!p.currentAction) {
+                        // Safety: if action was lost, return to idle
+                        p.state = 'idle';
+                        p.idleTimer = 60;
+                        break;
+                    }
                     p.state = 'acting';
                     p.actionTimer = p.currentAction.duration / (0.5 + p.geschick * 0.08) + 240; // +4s pause after speaking
                     p.activityDe = p.currentAction.activityDe;
@@ -7051,6 +7058,7 @@
     let uiTimer = 0;
 
     function gameLoop(timestamp) {
+        requestAnimationFrame(gameLoop); // schedule next frame first, so exceptions don't kill the loop
         const rawDt = lastTime ? (timestamp - lastTime) : 16;
         lastTime = timestamp;
 
@@ -7166,7 +7174,6 @@
             updateTimeDisplay();
         }
 
-        requestAnimationFrame(gameLoop);
     }
 
     // Keyboard shortcuts
