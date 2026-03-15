@@ -2102,6 +2102,80 @@
     ];
 
     // ============================================================
+    //  RIVER BARRIER & PATHFINDING
+    // ============================================================
+    // River runs roughly x=705..800 (meandering bezier), full height
+    const RIVER_LEFT  = 705;
+    const RIVER_RIGHT = 800;
+    const BRIDGE = { x: 750, y: 400, halfW: 45, halfH: 20 };
+
+    function isInRiver(x) {
+        return x > RIVER_LEFT && x < RIVER_RIGHT;
+    }
+
+    function crossesRiver(x1, x2) {
+        // True if one point is left of river and the other is right (or inside)
+        const left1  = x1 <= RIVER_LEFT;
+        const right1 = x1 >= RIVER_RIGHT;
+        const left2  = x2 <= RIVER_LEFT;
+        const right2 = x2 >= RIVER_RIGHT;
+        if (left1 && right2) return true;
+        if (right1 && left2) return true;
+        if (left1 && isInRiver(x2)) return true;
+        if (right1 && isInRiver(x2)) return true;
+        if (left2 && isInRiver(x1)) return true;
+        if (right2 && isInRiver(x1)) return true;
+        return false;
+    }
+
+    // Build waypoints for river crossing via bridge
+    function planWaypoints(fromX, fromY, toX, toY) {
+        if (!crossesRiver(fromX, toX)) return null; // no waypoints needed
+        const waypoints = [];
+        // Approach bridge from the correct side
+        const comingFromLeft = fromX < RIVER_LEFT;
+        const bridgeApproach = comingFromLeft
+            ? { x: RIVER_LEFT - 5, y: BRIDGE.y }
+            : { x: RIVER_RIGHT + 5, y: BRIDGE.y };
+        const bridgeExit = comingFromLeft
+            ? { x: RIVER_RIGHT + 5, y: BRIDGE.y }
+            : { x: RIVER_LEFT - 5, y: BRIDGE.y };
+        waypoints.push(bridgeApproach);
+        waypoints.push({ x: BRIDGE.x, y: BRIDGE.y }); // cross bridge center
+        waypoints.push(bridgeExit);
+        return waypoints;
+    }
+
+    // Check if a point is inside any building (for avoidance)
+    const BUILDING_TYPES = ['house', 'teahouse', 'kitchen', 'workshop', 'market', 'pagoda', 'shrine', 'gate'];
+    function isInsideBuilding(x, y, excludeType) {
+        for (const obj of worldObjects) {
+            if (!BUILDING_TYPES.includes(obj.type)) continue;
+            if (excludeType && obj.type === excludeType) continue;
+            const hw = obj.w / 2, hh = obj.h / 2;
+            if (x > obj.x - hw && x < obj.x + hw && y > obj.y - hh && y < obj.y + hh) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+    // Set target with automatic river-crossing waypoints
+    function setTargetWithPath(character, tx, ty) {
+        character.targetX = tx;
+        character.targetY = ty;
+        const wp = planWaypoints(character.x, character.y, tx, ty);
+        character.waypoints = wp || [];
+    }
+
+    // Ensure NPCs don't spawn inside the river
+    function clampOutOfRiver(x) {
+        if (x > RIVER_LEFT && x < BRIDGE.x) return RIVER_LEFT - 5;
+        if (x >= BRIDGE.x && x < RIVER_RIGHT) return RIVER_RIGHT + 5;
+        return x;
+    }
+
+    // ============================================================
     //  ACTION DEFINITIONS
     // ============================================================
     const ACTION_DEFS = [
@@ -2913,6 +2987,9 @@
 
             // Relationships (name → score 0-100)
             this.relationships = {};
+
+            // Waypoint navigation
+            this.waypoints = [];
         }
 
         get moveSpeed() {
@@ -2963,16 +3040,26 @@
         }
 
         moveToward(tx, ty, dt) {
-            const dx = tx - this.x;
-            const dy = ty - this.y;
+            // Navigate through waypoints first
+            let goalX = tx, goalY = ty;
+            if (this.waypoints && this.waypoints.length > 0) {
+                goalX = this.waypoints[0].x;
+                goalY = this.waypoints[0].y;
+            }
+            const dx = goalX - this.x;
+            const dy = goalY - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 3) return true;
+            if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
+                this.waypoints.shift();
+                return false; // reached waypoint, continue to next
+            }
+            if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) return true;
             const spd = this.moveSpeed * dt * 0.4;
             const step = Math.min(spd, dist);
             this.x += (dx / dist) * step;
             this.y += (dy / dist) * step;
             this.facing = Math.atan2(dy, dx);
-            return dist < 8;
+            return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
         }
     }
 
@@ -5002,10 +5089,7 @@
                     npc.facing = Math.atan2(fire.y - npc.y, fire.x - npc.x);
                     if (npc.state === 'idle') {
                         npc.state = 'moving';
-                        npc.targetX = fire.x + randFloat(-30, 30);
-                        npc.targetY = fire.y + randFloat(-30, 30);
-                        npc.targetX = Math.max(40, Math.min(WORLD_W - 40, npc.targetX));
-                        npc.targetY = Math.max(40, Math.min(WORLD_H - 40, npc.targetY));
+                        setTargetWithPath(npc, Math.max(40, Math.min(WORLD_W - 40, fire.x + randFloat(-30, 30))), Math.max(40, Math.min(WORLD_H - 40, fire.y + randFloat(-30, 30))));
                     }
                 }
             }
@@ -5356,22 +5440,26 @@
                     p.activityDe = 'Geht zu ' + (action.activityDe || '...');
 
                     // Find target
+                    let tx, ty;
                     if (action.target) {
                         const obj = findClosestObject(action.target);
                         if (obj) {
-                            p.targetX = obj.x + randFloat(-15, 15);
-                            p.targetY = obj.y + randFloat(-15, 15);
+                            tx = obj.x + randFloat(-15, 15);
+                            ty = obj.y + randFloat(-15, 15);
+                        } else {
+                            tx = p.x; ty = p.y;
                         }
                     } else if (action.requiresOther) {
-                        p.targetX = persons[1].x + randFloat(-20, 20);
-                        p.targetY = persons[1].y + randFloat(-20, 20);
+                        tx = persons[1].x + randFloat(-20, 20);
+                        ty = persons[1].y + randFloat(-20, 20);
                     } else {
-                        p.targetX = p.x + randFloat(-60, 60);
-                        p.targetY = p.y + randFloat(-40, 40);
+                        tx = p.x + randFloat(-60, 60);
+                        ty = p.y + randFloat(-40, 40);
                     }
                     // Clamp to world
-                    p.targetX = Math.max(30, Math.min(WORLD_W - 30, p.targetX));
-                    p.targetY = Math.max(30, Math.min(WORLD_H - 30, p.targetY));
+                    tx = Math.max(30, Math.min(WORLD_W - 30, tx));
+                    ty = Math.max(30, Math.min(WORLD_H - 30, ty));
+                    setTargetWithPath(p, tx, ty);
                 }
                 break;
 
@@ -5448,8 +5536,7 @@
 
             if (needAction) {
                 learner.state = 'moving';
-                learner.targetX = needAction.target.x + randFloat(-10, 10);
-                learner.targetY = needAction.target.y + randFloat(-10, 10);
+                setTargetWithPath(learner, needAction.target.x + randFloat(-10, 10), needAction.target.y + randFloat(-10, 10));
                 learner.currentAction = needAction.action;
                 learner.activityDe = needAction.label;
                 learner.followMode = 'returning'; // will return to speaker after
@@ -5469,10 +5556,9 @@
                             // Curious learners wander further and longer
                             const wanderRange = 80 + learner.neugier * 8;
                             learner.wanderTimer = randInt(100 + learner.neugier * 15, 300 + learner.neugier * 20);
-                            learner.targetX = learner.x + randFloat(-wanderRange, wanderRange);
-                            learner.targetY = learner.y + randFloat(-wanderRange * 0.8, wanderRange * 0.8);
-                            learner.targetX = Math.max(40, Math.min(WORLD_W - 40, learner.targetX));
-                            learner.targetY = Math.max(40, Math.min(WORLD_H - 40, learner.targetY));
+                            let wtx = Math.max(40, Math.min(WORLD_W - 40, learner.x + randFloat(-wanderRange, wanderRange)));
+                            let wty = Math.max(40, Math.min(WORLD_H - 40, learner.y + randFloat(-wanderRange * 0.8, wanderRange * 0.8)));
+                            setTargetWithPath(learner, wtx, wty);
                             learner.activityDe = 'Schaut sich um';
                         }
                         // Sociable learners re-check sooner (shorter follow timer)
@@ -5512,19 +5598,17 @@
                         // Move toward speaker
                         const angle = Math.atan2(speaker.y - learner.y, speaker.x - learner.x);
                         const followDist = 30 + Math.random() * 25;
-                        learner.targetX = speaker.x - Math.cos(angle) * followDist;
-                        learner.targetY = speaker.y - Math.sin(angle) * followDist;
-                        learner.targetX = Math.max(30, Math.min(WORLD_W - 30, learner.targetX));
-                        learner.targetY = Math.max(30, Math.min(WORLD_H - 30, learner.targetY));
+                        let ftx = Math.max(30, Math.min(WORLD_W - 30, speaker.x - Math.cos(angle) * followDist));
+                        let fty = Math.max(30, Math.min(WORLD_H - 30, speaker.y - Math.sin(angle) * followDist));
+                        setTargetWithPath(learner, ftx, fty);
                         learner.moveToward(learner.targetX, learner.targetY, dt);
                         learner.facing = angle;
                     } else if (distToSpeaker > 25) {
                         // Near speaker: wander gently around them
                         if (Math.random() < 0.003 * dt) {
-                            learner.targetX = speaker.x + randFloat(-45, 45);
-                            learner.targetY = speaker.y + randFloat(-45, 45);
-                            learner.targetX = Math.max(30, Math.min(WORLD_W - 30, learner.targetX));
-                            learner.targetY = Math.max(30, Math.min(WORLD_H - 30, learner.targetY));
+                            let gtx = Math.max(30, Math.min(WORLD_W - 30, speaker.x + randFloat(-45, 45)));
+                            let gty = Math.max(30, Math.min(WORLD_H - 30, speaker.y + randFloat(-45, 45)));
+                            setTargetWithPath(learner, gtx, gty);
                         }
                         learner.moveToward(learner.targetX, learner.targetY, dt);
                     }
@@ -5532,10 +5616,9 @@
                     learner.activityDe = 'Schaut sich um';
                     // Move to wander target, pick new one when reached
                     if (learner.distTo(learner.targetX, learner.targetY) < 10) {
-                        learner.targetX = learner.x + randFloat(-80, 80);
-                        learner.targetY = learner.y + randFloat(-60, 60);
-                        learner.targetX = Math.max(40, Math.min(WORLD_W - 40, learner.targetX));
-                        learner.targetY = Math.max(40, Math.min(WORLD_H - 40, learner.targetY));
+                        let wtx2 = Math.max(40, Math.min(WORLD_W - 40, learner.x + randFloat(-80, 80)));
+                        let wty2 = Math.max(40, Math.min(WORLD_H - 40, learner.y + randFloat(-60, 60)));
+                        setTargetWithPath(learner, wtx2, wty2);
                     }
                     learner.moveToward(learner.targetX, learner.targetY, dt);
                 }
@@ -5720,7 +5803,7 @@
     class NPC {
         constructor(name) {
             this.name = name;
-            this.x = randFloat(80, WORLD_W - 80);
+            this.x = clampOutOfRiver(randFloat(80, WORLD_W - 80));
             this.y = randFloat(80, WORLD_H - 80);
             this.targetX = this.x;
             this.targetY = this.y;
@@ -5744,6 +5827,9 @@
 
             // Relationships
             this.relationships = {};
+
+            // Waypoint navigation
+            this.waypoints = [];
         }
 
         distTo(ox, oy) {
@@ -5751,16 +5837,26 @@
         }
 
         moveToward(tx, ty, dt) {
-            const dx = tx - this.x;
-            const dy = ty - this.y;
+            // Navigate through waypoints first
+            let goalX = tx, goalY = ty;
+            if (this.waypoints && this.waypoints.length > 0) {
+                goalX = this.waypoints[0].x;
+                goalY = this.waypoints[0].y;
+            }
+            const dx = goalX - this.x;
+            const dy = goalY - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 3) return true;
+            if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
+                this.waypoints.shift();
+                return false;
+            }
+            if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) return true;
             const spd = this.speed * dt * 0.35;
             const step = Math.min(spd, dist);
             this.x += (dx / dist) * step;
             this.y += (dy / dist) * step;
             this.facing = Math.atan2(dy, dx);
-            return dist < 8;
+            return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
         }
     }
 
@@ -6310,8 +6406,7 @@
                         if (!startedChat) {
                             // Wander to a random nearby point
                             npc.state = 'moving';
-                            npc.targetX = Math.max(40, Math.min(WORLD_W - 40, npc.x + randFloat(-120, 120)));
-                            npc.targetY = Math.max(40, Math.min(WORLD_H - 40, npc.y + randFloat(-120, 120)));
+                            setTargetWithPath(npc, Math.max(40, Math.min(WORLD_W - 40, npc.x + randFloat(-120, 120))), Math.max(40, Math.min(WORLD_H - 40, npc.y + randFloat(-120, 120))));
                             npc.activityDe = 'Geht umher';
                         }
                     }
@@ -6338,8 +6433,7 @@
                         // Wander away after chat
                         if (Math.random() < 0.5) {
                             npc.state = 'moving';
-                            npc.targetX = Math.max(40, Math.min(WORLD_W - 40, npc.x + randFloat(-100, 100)));
-                            npc.targetY = Math.max(40, Math.min(WORLD_H - 40, npc.y + randFloat(-100, 100)));
+                            setTargetWithPath(npc, Math.max(40, Math.min(WORLD_W - 40, npc.x + randFloat(-100, 100))), Math.max(40, Math.min(WORLD_H - 40, npc.y + randFloat(-100, 100))));
                         }
                     }
                     break;
@@ -6379,10 +6473,7 @@
             const rel = npc.relationships[speaker.name] || 0;
             if (rel > 50 && npc.state === 'idle' && Math.random() < 0.0003 * dt * (rel / 100)) {
                 npc.state = 'moving';
-                npc.targetX = speaker.x + randFloat(-40, 40);
-                npc.targetY = speaker.y + randFloat(-40, 40);
-                npc.targetX = Math.max(40, Math.min(WORLD_W - 40, npc.targetX));
-                npc.targetY = Math.max(40, Math.min(WORLD_H - 40, npc.targetY));
+                setTargetWithPath(npc, Math.max(40, Math.min(WORLD_W - 40, speaker.x + randFloat(-40, 40))), Math.max(40, Math.min(WORLD_H - 40, speaker.y + randFloat(-40, 40))));
                 npc.activityDe = 'Folgt ' + speaker.name;
             }
         }
@@ -7127,6 +7218,44 @@
 
             // Update NPCs
             updateNPCs(dt);
+
+            // Push characters out of buildings they're not targeting
+            const allMovers = [...persons, ...npcs];
+            for (const c of allMovers) {
+                // Determine which building type this character is targeting
+                let targetType = null;
+                if (c.currentAction && c.currentAction.target) {
+                    targetType = c.currentAction.target;
+                } else if (c.currentAction && c.currentAction.id) {
+                    // infer from action id
+                    const act = ACTION_DEFS.find(a => a.id === c.currentAction.id);
+                    if (act) targetType = act.target;
+                }
+                const bldg = isInsideBuilding(c.x, c.y, targetType);
+                if (bldg) {
+                    // Push toward nearest edge
+                    const dx = c.x - bldg.x;
+                    const dy = c.y - bldg.y;
+                    const hw = bldg.w / 2 + 3, hh = bldg.h / 2 + 3;
+                    // Find which edge is closest
+                    const dLeft = Math.abs(c.x - (bldg.x - hw));
+                    const dRight = Math.abs(c.x - (bldg.x + hw));
+                    const dTop = Math.abs(c.y - (bldg.y - hh));
+                    const dBot = Math.abs(c.y - (bldg.y + hh));
+                    const minD = Math.min(dLeft, dRight, dTop, dBot);
+                    if (minD === dLeft) c.x = bldg.x - hw;
+                    else if (minD === dRight) c.x = bldg.x + hw;
+                    else if (minD === dTop) c.y = bldg.y - hh;
+                    else c.y = bldg.y + hh;
+                }
+                // Also push out of river (except on bridge)
+                if (isInRiver(c.x)) {
+                    const onBridge = Math.abs(c.y - BRIDGE.y) < BRIDGE.halfH + 5;
+                    if (!onBridge) {
+                        c.x = c.x < BRIDGE.x ? RIVER_LEFT - 2 : RIVER_RIGHT + 2;
+                    }
+                }
+            }
 
             // Update wildlife
             updateWildlife(dt);
