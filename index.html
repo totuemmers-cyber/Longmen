@@ -3266,17 +3266,26 @@
             const hasPinyin = this.pinyinText && !this.isResponse;
             const hanziFontSize = Math.round(13 * canvasScale);
             const pinyinFontSize = Math.round(9 * canvasScale);
-            ctx.font = `bold ${hanziFontSize}px ${CJK_FONT}`;
-            const hanziW = ctx.measureText(this.hanziText).width;
-            let pinyinW = 0;
-            if (hasPinyin) {
-                ctx.font = `${pinyinFontSize}px 'Courier New',${CJK_FONT}`;
-                pinyinW = ctx.measureText(this.pinyinText).width;
+            const responseFontSize = Math.round(11 * canvasScale);
+
+            let textW;
+            if (this.isResponse) {
+                // Measure with the actual font used for response rendering
+                ctx.font = `bold ${responseFontSize}px 'Courier New',${CJK_FONT}`;
+                textW = ctx.measureText(this.text).width;
+            } else {
+                ctx.font = `bold ${hanziFontSize}px ${CJK_FONT}`;
+                const hanziW = ctx.measureText(this.hanziText).width;
+                let pinyinW = 0;
+                if (hasPinyin) {
+                    ctx.font = `${pinyinFontSize}px 'Courier New',${CJK_FONT}`;
+                    pinyinW = ctx.measureText(this.pinyinText).width;
+                }
+                textW = Math.max(hanziW, pinyinW);
             }
 
             const pad = 8 * canvasScale;
-            const tw = Math.max(hanziW, pinyinW);
-            const bw = tw + pad * 2;
+            const bw = textW + pad * 2;
             const bh = (hasPinyin ? 34 : 22) * canvasScale;
             const bx = x - bw / 2;
             const by = y - bh;
