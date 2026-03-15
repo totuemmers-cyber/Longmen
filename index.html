@@ -4390,14 +4390,12 @@
                 ctx.fillStyle = '#5a3a1a';
                 ctx.fillRect(x - w/3, y - h/6, 3*canvasScale, h/2);
                 ctx.fillRect(x + w/3 - 3*canvasScale, y - h/6, 3*canvasScale, h/2);
-                // Platform planks (semi-transparent wood)
-                ctx.globalAlpha = 0.75;
+                // Platform planks
                 ctx.fillStyle = '#7a5a2a';
                 for (let i = 0; i < 5; i++) {
                     const py = y - h/3 + i * h/6;
                     ctx.fillRect(x - w/2, py, w, h/7 - canvasScale);
                 }
-                ctx.globalAlpha = 1.0;
                 // Plank gaps
                 ctx.strokeStyle = 'rgba(40,30,15,0.3)';
                 ctx.lineWidth = canvasScale * 0.5;
