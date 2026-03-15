@@ -5371,7 +5371,7 @@
             case 'moving':
                 if (p.moveToward(p.targetX, p.targetY, dt)) {
                     p.state = 'acting';
-                    p.actionTimer = p.currentAction.duration / (0.5 + p.geschick * 0.08);
+                    p.actionTimer = p.currentAction.duration / (0.5 + p.geschick * 0.08) + 240; // +4s pause after speaking
                     p.activityDe = p.currentAction.activityDe;
                     sfxForAction(p.currentAction.id);
                     speakerSpeak(p.currentAction);
