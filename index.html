@@ -2174,17 +2174,15 @@
     }
 
     // Steer around obstacles: try original direction, then alternate angles
-    // Returns {dx, dy} of the best movement direction, or null if stuck
+    // Always returns a direction — never leaves the character stuck
     function steerAroundObstacles(x, y, dirX, dirY, step, targetType) {
         // Try original direction first
-        const nx = x + dirX * step;
-        const ny = y + dirY * step;
-        if (!isBlocked(nx, ny, targetType)) {
+        if (!isBlocked(x + dirX * step, y + dirY * step, targetType)) {
             return { dx: dirX, dy: dirY };
         }
-        // Try increasingly wider angles (±30°, ±60°, ±90°, ±120°)
+        // Try increasingly wider angles
         const baseAngle = Math.atan2(dirY, dirX);
-        const offsets = [0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.0, -2.0]; // radians (~30° steps)
+        const offsets = [0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.6, -1.6, 2.2, -2.2, 2.8, -2.8];
         for (const off of offsets) {
             const angle = baseAngle + off;
             const sdx = Math.cos(angle);
@@ -2193,12 +2191,13 @@
                 return { dx: sdx, dy: sdy };
             }
         }
-        return null; // fully stuck
+        // All angles blocked: move in original direction anyway (prevents freezing)
+        return { dx: dirX, dy: dirY };
     }
 
     // Check if a line segment from (x1,y1) to (x2,y2) intersects a rectangle
     function lineIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh) {
-        const hw = rw / 2 + 8, hh = rh / 2 + 8; // margin
+        const hw = rw / 2 + 4, hh = rh / 2 + 4; // small margin
         const left = rx - hw, right = rx + hw, top = ry - hh, bot = ry + hh;
         // Liang-Barsky clipping
         const dx = x2 - x1, dy = y2 - y1;
@@ -2230,16 +2229,19 @@
             if (targetType && obj.type === targetType) continue;
             if (!lineIntersectsRect(fromX, fromY, toX, toY, obj.x, obj.y, obj.w, obj.h)) continue;
             // Route around this building - pick the corner closest to the straight line
-            const hw = obj.w / 2 + 12, hh = obj.h / 2 + 12;
+            const hw = obj.w / 2 + 10, hh = obj.h / 2 + 10;
             const corners = [
                 { x: obj.x - hw, y: obj.y - hh },
                 { x: obj.x + hw, y: obj.y - hh },
                 { x: obj.x - hw, y: obj.y + hh },
                 { x: obj.x + hw, y: obj.y + hh },
             ];
-            // Pick the corner that results in shortest total detour
+            // Pick the corner that results in shortest total detour and isn't itself blocked
             let bestCorner = null, bestDist = Infinity;
             for (const c of corners) {
+                // Skip corners that land in the river or another building
+                if (isInRiver(c.x)) continue;
+                if (c.x < 20 || c.x > WORLD_W - 20 || c.y < 20 || c.y > WORLD_H - 20) continue;
                 const d = Math.sqrt((fromX - c.x) ** 2 + (fromY - c.y) ** 2)
                         + Math.sqrt((toX - c.x) ** 2 + (toY - c.y) ** 2);
                 if (d < bestDist) { bestDist = d; bestCorner = c; }
@@ -3111,6 +3113,9 @@
 
             // Waypoint navigation
             this.waypoints = [];
+            this.stuckTimer = 0;
+            this.lastMoveX = this.x;
+            this.lastMoveY = this.y;
         }
 
         get moveSpeed() {
@@ -3172,9 +3177,30 @@
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
                 this.waypoints.shift();
+                this.stuckTimer = 0;
                 return false;
             }
-            if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) return true;
+            if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) {
+                this.stuckTimer = 0;
+                return true;
+            }
+            // Stuck detection: if barely moved in last ~2 seconds, skip waypoint or give up
+            const movedDist = Math.sqrt((this.x - this.lastMoveX) ** 2 + (this.y - this.lastMoveY) ** 2);
+            this.stuckTimer += dt;
+            if (this.stuckTimer > 30) {
+                this.stuckTimer = 0;
+                this.lastMoveX = this.x;
+                this.lastMoveY = this.y;
+                if (movedDist < 5) {
+                    // Stuck! Skip current waypoint or give up entirely
+                    if (this.waypoints && this.waypoints.length > 0) {
+                        this.waypoints.shift();
+                    } else {
+                        return true; // give up, treat as arrived
+                    }
+                    return false;
+                }
+            }
             const spd = this.moveSpeed * dt * 0.4;
             const step = Math.min(spd, dist);
             const dirX = dx / dist, dirY = dy / dist;
@@ -3185,11 +3211,9 @@
                 else { const a = ACTION_DEFS.find(a => a.id === this.currentAction.id); if (a) tType = a.target; }
             }
             const steer = steerAroundObstacles(this.x, this.y, dirX, dirY, step, tType);
-            if (steer) {
-                this.x += steer.dx * step;
-                this.y += steer.dy * step;
-                this.facing = Math.atan2(steer.dy, steer.dx);
-            }
+            this.x += steer.dx * step;
+            this.y += steer.dy * step;
+            this.facing = Math.atan2(steer.dy, steer.dx);
             return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
         }
     }
@@ -5961,6 +5985,9 @@
 
             // Waypoint navigation
             this.waypoints = [];
+            this.stuckTimer = 0;
+            this.lastMoveX = this.x;
+            this.lastMoveY = this.y;
         }
 
         distTo(ox, oy) {
@@ -5979,18 +6006,36 @@
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
                 this.waypoints.shift();
+                this.stuckTimer = 0;
                 return false;
             }
-            if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) return true;
+            if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) {
+                this.stuckTimer = 0;
+                return true;
+            }
+            // Stuck detection
+            const movedDist = Math.sqrt((this.x - this.lastMoveX) ** 2 + (this.y - this.lastMoveY) ** 2);
+            this.stuckTimer += dt;
+            if (this.stuckTimer > 30) {
+                this.stuckTimer = 0;
+                this.lastMoveX = this.x;
+                this.lastMoveY = this.y;
+                if (movedDist < 5) {
+                    if (this.waypoints && this.waypoints.length > 0) {
+                        this.waypoints.shift();
+                    } else {
+                        return true;
+                    }
+                    return false;
+                }
+            }
             const spd = this.speed * dt * 0.35;
             const step = Math.min(spd, dist);
             const dirX = dx / dist, dirY = dy / dist;
             const steer = steerAroundObstacles(this.x, this.y, dirX, dirY, step, null);
-            if (steer) {
-                this.x += steer.dx * step;
-                this.y += steer.dy * step;
-                this.facing = Math.atan2(steer.dy, steer.dx);
-            }
+            this.x += steer.dx * step;
+            this.y += steer.dy * step;
+            this.facing = Math.atan2(steer.dy, steer.dx);
             return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
         }
     }
