@@ -308,6 +308,8 @@
             <button id="btn-2x" onclick="setSpeed(2)">2x</button>
             <button id="btn-3x" onclick="setSpeed(3)">3x</button>
             <button id="btn-sound" onclick="toggleSound()">♪</button>
+            <button id="btn-save" onclick="manualSave()" title="Speichern">&#128190;</button>
+            <button id="btn-new" onclick="newGame()" title="Neues Spiel">&#9733;</button>
             <span id="time-display">Tag 1 — 06:00</span>
         </div>
     </div>
@@ -383,8 +385,33 @@
         const btn = document.getElementById('btn-sound');
         btn.textContent = soundEnabled ? '♪' : '♪̶';
         btn.classList.toggle('active', soundEnabled);
-        if (audioMaster) audioMaster.gain.value = soundEnabled ? 0.5 : 0;
-        if (soundEnabled) resumeAudio();
+        if (soundEnabled) {
+            resumeAudio();
+            if (audioStarted && !musicPlaying) startChineseMusic();
+        } else {
+            stopChineseMusic();
+        }
+    }
+
+    function stopChineseMusic() {
+        if (!musicPlaying) return;
+        musicPlaying = false;
+        for (const node of musicNodes) {
+            try {
+                if (node.stop) node.stop();
+            } catch (_) { /* already stopped */ }
+            try {
+                node.disconnect();
+            } catch (_) {}
+        }
+        musicNodes = [];
+        // Reset references so startChineseMusic can recreate them
+        musicGainNode = null;
+        droneOsc1 = null; droneOsc2 = null; droneFilt = null; droneGainNode = null; droneLfo = null;
+        ambNoiseNode = null; ambFiltNode = null; ambGainNode = null; ambLfo = null; ambLfoGain = null;
+        diziGainNode = null;
+        guzhengGainNode = null;
+        erhuGainNode = null;
     }
 
     // --- Utility: create noise buffer (cached by duration) ---
@@ -2296,6 +2323,15 @@
 
     // Check if a point is inside any building (for avoidance)
     const BUILDING_TYPES = ['house', 'teahouse', 'kitchen', 'workshop', 'market', 'pagoda', 'shrine', 'gate', 'school', 'medicine_hut', 'stable'];
+    const GROUND_TYPES = ['rice_paddy', 'river', 'lotus_pond', 'fish_pond', 'garden'];
+    const VISUAL_BOTTOM = {
+        house: 18, teahouse: 19, market: 14, well: 10, bridge: 22,
+        pagoda: 21, gate: 26, bamboo: 25, garden: 0, kitchen: 14,
+        workshop: 19, fish_pond: 0, shrine: 14, lantern_post: 16,
+        rice_paddy: 0, river: 0, dock: 12, lotus_pond: 0,
+        flower: 10, willow: 22, school: 20, medicine_hut: 13,
+        stable: 13, tea_terrace: 16, viewpoint: 13
+    };
     function isInsideBuilding(x, y, excludeType) {
         for (const obj of cachedBuildingObjects) {
             if (excludeType && obj.type === excludeType) continue;
@@ -3202,6 +3238,7 @@
     let previousWeather = 'clear';
     let nextWeatherChange = 800;
     let weatherParticles = [];
+    let rainSplashes = [];
     let weatherIntensity = 0;
     let targetWeatherIntensity = 0;
 
@@ -3276,7 +3313,10 @@
     }
 
     function drawCampDecorations(ctx) {
-        for (const d of campDecorations) {
+        for (const d of campDecorations) drawCampDecoration(ctx, d);
+    }
+    function drawCampDecoration(ctx, d) {
+        {
             const x = d.x * canvasScale;
             const y = d.y * canvasScale;
             const s = canvasScale;
@@ -4276,9 +4316,28 @@
         const ch = canvas.height / dpr;
         const s = canvasScale;
 
-        // Base green landscape
-        ctx.fillStyle = '#4a7a30';
+        // Base green landscape with subtle gradient (darker at top/distance)
+        const terrainGrad = ctx.createLinearGradient(0, 0, 0, ch);
+        terrainGrad.addColorStop(0, '#3e6e28');
+        terrainGrad.addColorStop(0.5, '#4a7a30');
+        terrainGrad.addColorStop(1, '#508035');
+        ctx.fillStyle = terrainGrad;
         ctx.fillRect(0, 0, cw, ch);
+
+        // Ground texture variation — subtle tonal circles
+        const groundSpots = [
+            [60,90,'#467428'],[200,150,'#4e7e32'],[340,420,'#3e7228'],[480,100,'#508030'],
+            [100,350,'#447228'],[550,480,'#3a6a24'],[720,550,'#4a7a2e'],[850,200,'#467428'],
+            [300,530,'#508030'],[180,480,'#3e6e28'],[630,350,'#447228'],[800,100,'#467428'],
+            [420,560,'#3a6a24'],[250,250,'#4e7e32'],[500,380,'#3e7228'],[150,60,'#447228'],
+            [750,480,'#508030'],[900,400,'#3e6e28'],[380,80,'#467428'],[650,560,'#4a7a2e'],
+        ];
+        for (const [gx, gy, gc] of groundSpots) {
+            ctx.beginPath();
+            ctx.ellipse(gx * s, gy * s, (20 + gx % 15) * s, (12 + gy % 10) * s, (gx * 0.01), 0, Math.PI * 2);
+            ctx.fillStyle = gc;
+            ctx.fill();
+        }
 
         // Rolling green hills in background
         const hills = [
@@ -4304,10 +4363,19 @@
         ctx.fillStyle = '#baa870';
         ctx.fill();
 
-        // Subtle dirt paths (simple stroked lines, low contrast)
+        // Subtle dirt paths with soft edges
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         const drawPath = (x1, y1, x2, y2, w, alpha) => {
+            // Soft outer edge
+            ctx.globalAlpha = alpha * 0.3;
+            ctx.strokeStyle = '#9a8868';
+            ctx.lineWidth = (w + 4) * s;
+            ctx.beginPath();
+            ctx.moveTo(x1 * s, y1 * s);
+            ctx.lineTo(x2 * s, y2 * s);
+            ctx.stroke();
+            // Main path
             ctx.globalAlpha = alpha;
             ctx.strokeStyle = '#a89878';
             ctx.lineWidth = w * s;
@@ -4323,11 +4391,26 @@
         drawPath(285, 205, 555, 395, 10, 0.25);
         // Side path to river
         drawPath(580, 300, 700, 300, 8, 0.2);
+        // Pebble dots along main path
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = '#8a7a60';
+        const pebbles = [[230,298],[280,303],[330,297],[380,301],[450,299],[520,302],[570,297],[620,300],
+                          [418,180],[422,220],[419,260],[421,340],[418,380],[420,420],[422,460]];
+        for (const [px, py] of pebbles) {
+            ctx.beginPath();
+            ctx.arc(px * s, py * s, (1 + (px % 3) * 0.5) * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.globalAlpha = 1.0;
         ctx.lineCap = 'butt';
 
-        // River on right side (gentle meander)
-        ctx.fillStyle = '#3a6a8a';
+        // River on right side (gentle meander) — gradient fill
+        const riverGrad = ctx.createLinearGradient(705 * s, 0, 800 * s, 0);
+        riverGrad.addColorStop(0, '#2a5a78');
+        riverGrad.addColorStop(0.3, '#3a7090');
+        riverGrad.addColorStop(0.7, '#3a7090');
+        riverGrad.addColorStop(1, '#2a5a78');
+        ctx.fillStyle = riverGrad;
         ctx.beginPath();
         ctx.moveTo(725 * s, 0);
         ctx.bezierCurveTo(720 * s, 120 * s, 715 * s, 280 * s, 710 * s, 400 * s);
@@ -4337,6 +4420,14 @@
         ctx.bezierCurveTo(797 * s, 180 * s, 790 * s, 80 * s, 785 * s, 0);
         ctx.closePath();
         ctx.fill();
+        // Shore highlight — left bank
+        ctx.strokeStyle = 'rgba(90,120,70,0.35)';
+        ctx.lineWidth = 2 * s;
+        ctx.beginPath();
+        ctx.moveTo(725 * s, 0);
+        ctx.bezierCurveTo(720 * s, 120 * s, 715 * s, 280 * s, 710 * s, 400 * s);
+        ctx.bezierCurveTo(705 * s, 500 * s, 708 * s, 560 * s, 705 * s, ch);
+        ctx.stroke();
         // River ripples (flow downward, clipped to river)
         ctx.save();
         ctx.clip(); // clip to the river path drawn above
@@ -4359,8 +4450,9 @@
             { x: 580, y: 530, r: 55, c: '#4e7e32' },
         ];
         for (const gp of grassPatches) {
+            const depthScale = 0.8 + (gp.y / WORLD_H) * 0.4;
             ctx.beginPath();
-            ctx.ellipse(gp.x * s, gp.y * s, gp.r * s, gp.r * 0.6 * s, 0, 0, Math.PI * 2);
+            ctx.ellipse(gp.x * s, gp.y * s, gp.r * depthScale * s, gp.r * 0.6 * depthScale * s, 0, 0, Math.PI * 2);
             ctx.fillStyle = gp.c;
             ctx.fill();
         }
@@ -4392,6 +4484,17 @@
         const y = obj.y * canvasScale;
         const w = obj.w * canvasScale;
         const h = obj.h * canvasScale;
+
+        // Soft shadow under object (skip ground-level types and bridge)
+        if (!GROUND_TYPES.includes(obj.type) && obj.type !== 'bridge') {
+            const vb = (VISUAL_BOTTOM[obj.type] || obj.h / 2) * canvasScale;
+            const shadowW = w * 0.7;
+            const shadowH = Math.max(h * 0.12, 3 * canvasScale);
+            ctx.beginPath();
+            ctx.ellipse(x, y + vb, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.10)';
+            ctx.fill();
+        }
 
         switch (obj.type) {
             case 'house': {
@@ -4432,6 +4535,23 @@
                     ctx.moveTo(x - w/2 - 4*canvasScale + i*4*canvasScale, ry + i*2*canvasScale);
                     ctx.quadraticCurveTo(x, ry - 2*canvasScale, x + w/2 + 4*canvasScale - i*4*canvasScale, ry + i*2*canvasScale);
                     ctx.stroke();
+                }
+                // Chimney smoke (not during rain)
+                if (currentWeather !== 'rain') {
+                    ctx.save();
+                    ctx.globalAlpha = 0.15;
+                    ctx.fillStyle = '#b0a890';
+                    const smokeT = gameTick * 0.02;
+                    for (let si = 0; si < 3; si++) {
+                        const sx = x + w/4 + Math.sin(smokeT + si * 2) * 3 * canvasScale;
+                        const sy = y - h/2 - 10*canvasScale - si * 8 * canvasScale;
+                        const sr = (2 + si * 1.5) * canvasScale;
+                        ctx.globalAlpha = 0.15 - si * 0.04;
+                        ctx.beginPath();
+                        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
                 }
                 break;
             }
@@ -4705,20 +4825,50 @@
                 // Gold characters (decorative dots)
                 ctx.fillStyle = '#c8a030';
                 ctx.fillRect(x - 5*canvasScale, y - h/3 + 6*canvasScale, 10*canvasScale, 3*canvasScale);
+                // Red banners hanging from arch beam — swaying
+                const bannerSway = Math.sin(gameTick * 0.03) * 2 * canvasScale;
+                const bannerSway2 = Math.sin(gameTick * 0.03 + 1.5) * 2 * canvasScale;
+                ctx.fillStyle = '#cc3030';
+                // Left banner
+                ctx.save();
+                ctx.translate(x - w/4, y - h/3 + 4*canvasScale);
+                ctx.beginPath();
+                ctx.moveTo(-2*canvasScale, 0);
+                ctx.lineTo(2*canvasScale, 0);
+                ctx.lineTo(2*canvasScale + bannerSway, 14*canvasScale);
+                ctx.lineTo(0 + bannerSway, 16*canvasScale); // pointed bottom
+                ctx.lineTo(-2*canvasScale + bannerSway, 14*canvasScale);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+                // Right banner
+                ctx.save();
+                ctx.translate(x + w/4, y - h/3 + 4*canvasScale);
+                ctx.beginPath();
+                ctx.moveTo(-2*canvasScale, 0);
+                ctx.lineTo(2*canvasScale, 0);
+                ctx.lineTo(2*canvasScale + bannerSway2, 14*canvasScale);
+                ctx.lineTo(0 + bannerSway2, 16*canvasScale);
+                ctx.lineTo(-2*canvasScale + bannerSway2, 14*canvasScale);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
                 break;
             }
 
             case 'bamboo': {
-                // 2-3 tall green bamboo stems with leaves
+                // 2-3 tall green bamboo stems with leaves — wind responsive
+                const windStr = currentWeather === 'wind' ? weatherIntensity : 0;
+                const bamSway = Math.sin(gameTick * 0.02 + obj.x * 0.05) * (2 + windStr * 6) * canvasScale;
                 const stems = [-5, 0, 5];
                 for (let si = 0; si < stems.length; si++) {
                     const sx = x + stems[si] * canvasScale;
-                    // Stem
+                    // Stem — with sway at top
                     ctx.strokeStyle = '#2a7a2a';
                     ctx.lineWidth = 3*canvasScale;
                     ctx.beginPath();
                     ctx.moveTo(sx, y + h/3);
-                    ctx.lineTo(sx, y - h/2 - 5*canvasScale);
+                    ctx.quadraticCurveTo(sx + bamSway * 0.3, y - h/6, sx + bamSway, y - h/2 - 5*canvasScale);
                     ctx.stroke();
                     // Nodes (joints)
                     ctx.strokeStyle = '#1a6a1a';
@@ -5211,26 +5361,28 @@
             }
 
             case 'flower': {
-                // Cluster of colorful flowers
+                // Cluster of colorful flowers — gentle sway
+                const flowerSway = Math.sin(gameTick * 0.025 + obj.x * 0.1) * 1.5 * canvasScale;
                 const flowerColors = ['#e84060','#e8a020','#c060e0','#e86040','#e0e040'];
                 for (let i = 0; i < 6; i++) {
                     const fx2 = x + (Math.cos(i*1.05) * 8)*canvasScale;
                     const fy2 = y + (Math.sin(i*1.05) * 6)*canvasScale;
+                    const iSway = flowerSway * (0.5 + i * 0.1);
                     // Stem
                     ctx.beginPath();
                     ctx.moveTo(fx2, fy2 + 6*canvasScale);
-                    ctx.lineTo(fx2, fy2);
+                    ctx.quadraticCurveTo(fx2 + iSway * 0.5, fy2 + 3*canvasScale, fx2 + iSway, fy2);
                     ctx.strokeStyle = '#3a7a2a';
                     ctx.lineWidth = canvasScale;
                     ctx.stroke();
                     // Petals
                     ctx.beginPath();
-                    ctx.arc(fx2, fy2, 3*canvasScale, 0, Math.PI*2);
+                    ctx.arc(fx2 + iSway, fy2, 3*canvasScale, 0, Math.PI*2);
                     ctx.fillStyle = flowerColors[i % flowerColors.length];
                     ctx.fill();
                     // Center
                     ctx.beginPath();
-                    ctx.arc(fx2, fy2, 1.2*canvasScale, 0, Math.PI*2);
+                    ctx.arc(fx2 + iSway, fy2, 1.2*canvasScale, 0, Math.PI*2);
                     ctx.fillStyle = '#e8d040';
                     ctx.fill();
                 }
@@ -5238,7 +5390,9 @@
             }
 
             case 'willow': {
-                // Willow tree with drooping branches
+                // Willow tree with drooping branches — wind responsive
+                const wWind = currentWeather === 'wind' ? weatherIntensity : 0;
+                const wSway = Math.sin(gameTick * 0.02 + obj.x * 0.03) * (3 + wWind * 8) * canvasScale;
                 // Trunk
                 ctx.fillStyle = '#5a3a1a';
                 ctx.fillRect(x - 4*canvasScale, y - 5*canvasScale, 8*canvasScale, 25*canvasScale);
@@ -5247,22 +5401,23 @@
                 ctx.lineWidth = 2*canvasScale;
                 const branchAngles = [-0.8, -0.3, 0.2, 0.7];
                 for (const a of branchAngles) {
-                    const bx = x + Math.cos(a) * 8*canvasScale;
+                    const bx = x + Math.cos(a) * 8*canvasScale + wSway * 0.3;
                     const by = y - 10*canvasScale + Math.sin(a) * 4*canvasScale;
                     ctx.beginPath();
                     ctx.moveTo(x, y - 5*canvasScale);
                     ctx.lineTo(bx, by);
                     ctx.stroke();
                 }
-                // Drooping branch lines (green)
+                // Drooping branch lines (green) — with wind sway
                 ctx.strokeStyle = '#3a8a2a';
                 ctx.lineWidth = canvasScale * 0.8;
                 for (let i = 0; i < 12; i++) {
-                    const startX = x + (Math.cos(i * 0.55) * 12)*canvasScale;
+                    const branchSway = wSway * (0.5 + i * 0.08) + Math.sin(gameTick * 0.015 + i * 0.9) * 2 * canvasScale;
+                    const startX = x + (Math.cos(i * 0.55) * 12)*canvasScale + branchSway * 0.3;
                     const startY = y - 12*canvasScale + Math.sin(i * 0.8) * 3*canvasScale;
-                    const endX = startX + (Math.cos(i * 0.55) * 6)*canvasScale;
+                    const endX = startX + (Math.cos(i * 0.55) * 6)*canvasScale + branchSway;
                     const endY = startY + 18*canvasScale + Math.sin(i * 1.2) * 4*canvasScale;
-                    const midX = (startX + endX)/2 + Math.sin(i) * 3*canvasScale;
+                    const midX = (startX + endX)/2 + Math.sin(i) * 3*canvasScale + branchSway * 0.6;
                     ctx.beginPath();
                     ctx.moveTo(startX, startY);
                     ctx.quadraticCurveTo(midX, (startY + endY)/2, endX, endY);
@@ -5278,7 +5433,7 @@
                 // Canopy mass (light)
                 ctx.fillStyle = 'rgba(60,140,50,0.25)';
                 ctx.beginPath();
-                ctx.arc(x, y - 10*canvasScale, 16*canvasScale, 0, Math.PI*2);
+                ctx.arc(x + wSway * 0.2, y - 10*canvasScale, 16*canvasScale, 0, Math.PI*2);
                 ctx.fill();
                 break;
             }
@@ -5505,15 +5660,35 @@
             }
         }
 
+        // Window glow at night
+        if ((gameHour >= 19 || gameHour < 6) && (obj.type === 'house' || obj.type === 'teahouse' || obj.type === 'school')) {
+            const nightA = gameHour >= 19 && gameHour < 20 ? (gameHour - 19) : gameHour >= 5 && gameHour < 6 ? (6 - gameHour) : 1;
+            const glowA = 0.25 * nightA;
+            ctx.fillStyle = `rgba(255,200,100,${glowA})`;
+            if (obj.type === 'house') {
+                // Door glow
+                ctx.fillRect(x - 4*canvasScale, y - h/4 + 6*canvasScale, 8*canvasScale, h/2 - 2*canvasScale);
+            } else if (obj.type === 'teahouse') {
+                // Open front interior glow
+                ctx.fillRect(x - w/2 + 4*canvasScale, y - h/4 + 2*canvasScale, w - 8*canvasScale, h/3);
+            } else if (obj.type === 'school') {
+                // Window glow
+                ctx.fillRect(x - w/4, y - h/4 + 4*canvasScale, w/2, h/4);
+            }
+        }
+
+        // Snow accumulation on rooftops
+        if (currentWeather === 'snow' && weatherIntensity > 0.3 && BUILDING_TYPES.includes(obj.type)) {
+            ctx.fillStyle = `rgba(240,240,250,${weatherIntensity * 0.5})`;
+            const snowY = y - h/4 - (obj.type === 'pagoda' ? h/3 : h/8);
+            const snowW = w * 0.8;
+            ctx.beginPath();
+            ctx.ellipse(x, snowY, snowW / 2, 2.5 * canvasScale, 0, Math.PI, 0);
+            ctx.fill();
+        }
+
         // Label — per-type visual bottom offset (distance from center to visual bottom in world coords)
-        const visualBottom = {
-            house: 18, teahouse: 19, market: 14, well: 10, bridge: 22,
-            pagoda: 21, gate: 26, bamboo: 25, garden: obj.h/2, kitchen: 14,
-            workshop: 19, fish_pond: obj.h/2, shrine: 14, lantern_post: 16,
-            rice_paddy: obj.h/2, river: obj.h/2, dock: 12, lotus_pond: obj.h/2,
-            flower: 10, willow: 22, school: 20, medicine_hut: 13,
-            stable: 13, tea_terrace: 16, viewpoint: 13
-        }[obj.type] || obj.h/2;
+        const visualBottom = VISUAL_BOTTOM[obj.type] || obj.h/2;
         ctx.font = `${Math.round(9*canvasScale)}px 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif`;
         ctx.fillStyle = 'rgba(200,190,160,0.6)';
         ctx.textAlign = 'center';
@@ -5530,6 +5705,22 @@
         const skin = person.skinTone;
         const cloth = person.clothColor;
         const isLearner = person.role === 'learner';
+        const isSleeping = person.state === 'acting' && person.currentAction &&
+            (person.currentAction.id === 'sleep_house' || person.currentAction.id === 'sleep_self');
+        const isActing = person.state === 'acting' && person.currentAction && !isSleeping;
+        const actionId = (person.currentAction && person.currentAction.id) || '';
+
+        // Breathing animation (idle only)
+        const breathPhase = Math.sin(gameTick * 0.04 + person.x * 0.1);
+        const breathOff = isMoving ? 0 : breathPhase * 0.3 * s;
+        // Idle fidget — subtle weight shift every few seconds
+        const fidgetPhase = Math.sin(gameTick * 0.008 + person.y * 0.2);
+        const fidgetX = (!isMoving && !isSleeping) ? fidgetPhase * 0.5 * s : 0;
+        // Head bob when walking
+        const headBob = isMoving ? Math.abs(Math.sin(gameTick * 0.30)) * 0.8 * s : breathOff * 0.5;
+        // Body lean when walking
+        const leanX = isMoving ? Math.cos(facing) * 1.0 * s : fidgetX;
+        const leanY = isMoving ? Math.sin(facing) * 1.0 * s : 0;
 
         ctx.save();
         ctx.translate(x, y);
@@ -5560,9 +5751,9 @@
         ctx.fill();
         ctx.restore();
 
-        // Body / robe (longer for Song Dynasty)
+        // Body / robe (longer for Song Dynasty) — with breathing
         ctx.beginPath();
-        ctx.ellipse(0, -2*s, 9*s, 12*s, 0, 0, Math.PI*2);
+        ctx.ellipse(leanX, -2*s + leanY, 9*s, 12*s + breathOff, 0, 0, Math.PI*2);
         ctx.fillStyle = cloth;
         ctx.fill();
         ctx.strokeStyle = '#1a1a10';
@@ -5575,26 +5766,62 @@
         ctx.beginPath();
         const collarFwd = Math.cos(facing) * 4 * s;
         const collarSide = Math.sin(facing) * 4 * s;
-        ctx.moveTo(Math.cos(facing + 0.8) * 6*s, Math.sin(facing + 0.8) * 6*s - 8*s);
-        ctx.lineTo(collarFwd, collarSide - 2*s);
-        ctx.lineTo(Math.cos(facing - 0.8) * 6*s, Math.sin(facing - 0.8) * 6*s - 8*s);
+        ctx.moveTo(leanX + Math.cos(facing + 0.8) * 6*s, leanY + Math.sin(facing + 0.8) * 6*s - 8*s);
+        ctx.lineTo(leanX + collarFwd, leanY + collarSide - 2*s);
+        ctx.lineTo(leanX + Math.cos(facing - 0.8) * 6*s, leanY + Math.sin(facing - 0.8) * 6*s - 8*s);
         ctx.stroke();
 
         // Belt / sash
         ctx.beginPath();
-        ctx.ellipse(0, 2*s, 9*s, 2*s, 0, 0, Math.PI*2);
+        ctx.ellipse(leanX, 2*s + leanY, 9*s, 2*s, 0, 0, Math.PI*2);
         ctx.fillStyle = isLearner ? '#6a4a2a' : '#8a6030';
         ctx.fill();
 
-        // Arms with sleeves (wide sleeves for Chinese robe, narrower for learner)
-        const armSwing = walkCycle * 2 * s;
+        // Arms with sleeves — action-specific poses
+        let leftArmSwing = walkCycle * 2 * s;
+        let rightArmSwing = -walkCycle * 2 * s;
+        let leftArmYOff = -3 * s;
+        let rightArmYOff = -3 * s;
         const sleeveW = isLearner ? 3.5*s : 5*s;
         const sleeveH = isLearner ? 5*s : 6*s;
+
+        if (isActing) {
+            if (actionId.startsWith('cook') || actionId === 'make_soup' || actionId === 'brew_tea') {
+                // Both arms forward (stirring)
+                leftArmSwing = 4 * s + Math.sin(gameTick * 0.1) * 1.5 * s;
+                rightArmSwing = 3 * s + Math.cos(gameTick * 0.1) * 1.5 * s;
+                leftArmYOff = -5 * s;
+                rightArmYOff = -5 * s;
+            } else if (actionId.startsWith('write') || actionId === 'grind_ink' || actionId.startsWith('paint') || actionId.startsWith('read')) {
+                // One arm extended (writing/reading)
+                leftArmSwing = 5 * s + Math.sin(gameTick * 0.06) * 0.5 * s;
+                rightArmSwing = -1 * s;
+                leftArmYOff = -6 * s;
+            } else if (actionId === 'fish_catch') {
+                // Arm extended to side (holding rod)
+                rightArmSwing = -6 * s;
+                rightArmYOff = -6 * s;
+            } else if (actionId.startsWith('eat') || actionId.startsWith('drink')) {
+                // One arm raised to mouth
+                leftArmSwing = 3 * s;
+                leftArmYOff = -8 * s + Math.sin(gameTick * 0.08) * s;
+            } else if (actionId === 'cut_bamboo') {
+                // Chopping motion
+                rightArmSwing = -4 * s;
+                rightArmYOff = -4 * s + Math.sin(gameTick * 0.2) * 3 * s;
+            }
+        } else if (isSleeping) {
+            leftArmSwing = 0;
+            rightArmSwing = 0;
+            leftArmYOff = 0;
+            rightArmYOff = 0;
+        }
+
         // Left arm
         ctx.save();
-        ctx.translate(Math.cos(facing + 1.5) * 9*s, Math.sin(facing + 1.5) * 9*s);
+        ctx.translate(leanX + Math.cos(facing + 1.5) * 9*s, leanY + Math.sin(facing + 1.5) * 9*s);
         ctx.beginPath();
-        ctx.ellipse(Math.cos(facing) * armSwing, Math.sin(facing) * armSwing - 3*s, sleeveW, sleeveH, facing + 0.3, 0, Math.PI*2);
+        ctx.ellipse(Math.cos(facing) * leftArmSwing, Math.sin(facing) * leftArmSwing + leftArmYOff, sleeveW, sleeveH, facing + 0.3, 0, Math.PI*2);
         ctx.fillStyle = cloth;
         ctx.fill();
         ctx.strokeStyle = '#1a1a10';
@@ -5602,29 +5829,29 @@
         ctx.stroke();
         // Hand
         ctx.beginPath();
-        ctx.arc(Math.cos(facing) * (armSwing + 2*s), Math.sin(facing) * (armSwing + 2*s) - 3*s, 2*s, 0, Math.PI*2);
+        ctx.arc(Math.cos(facing) * (leftArmSwing + 2*s), Math.sin(facing) * (leftArmSwing + 2*s) + leftArmYOff, 2*s, 0, Math.PI*2);
         ctx.fillStyle = skin;
         ctx.fill();
         ctx.restore();
         // Right arm
         ctx.save();
-        ctx.translate(Math.cos(facing - 1.5) * 9*s, Math.sin(facing - 1.5) * 9*s);
+        ctx.translate(leanX + Math.cos(facing - 1.5) * 9*s, leanY + Math.sin(facing - 1.5) * 9*s);
         ctx.beginPath();
-        ctx.ellipse(Math.cos(facing) * -armSwing, Math.sin(facing) * -armSwing - 3*s, sleeveW, sleeveH, facing - 0.3, 0, Math.PI*2);
+        ctx.ellipse(Math.cos(facing) * rightArmSwing, Math.sin(facing) * rightArmSwing + rightArmYOff, sleeveW, sleeveH, facing - 0.3, 0, Math.PI*2);
         ctx.fillStyle = cloth;
         ctx.fill();
         ctx.strokeStyle = '#1a1a10';
         ctx.lineWidth = 0.4*s;
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(Math.cos(facing) * (-armSwing + 2*s), Math.sin(facing) * (-armSwing + 2*s) - 3*s, 2*s, 0, Math.PI*2);
+        ctx.arc(Math.cos(facing) * (rightArmSwing + 2*s), Math.sin(facing) * (rightArmSwing + 2*s) + rightArmYOff, 2*s, 0, Math.PI*2);
         ctx.fillStyle = skin;
         ctx.fill();
         ctx.restore();
 
-        // Head
-        const headX = Math.cos(facing) * 3 * s;
-        const headY = Math.sin(facing) * 3 * s - 12 * s;
+        // Head — with breathing bob and walk bob
+        const headX = leanX + Math.cos(facing) * 3 * s;
+        const headY = leanY + Math.sin(facing) * 3 * s - 12 * s - headBob;
         ctx.beginPath();
         ctx.arc(headX, headY, 6*s, 0, Math.PI*2);
         ctx.fillStyle = skin;
@@ -5670,7 +5897,7 @@
         }
         ctx.restore();
 
-        // Eyes
+        // Eyes — with blinking
         const eyeDist = 2.5 * s;
         const eyeFwd = 3 * s;
         const lEx = headX + Math.cos(facing) * eyeFwd + Math.cos(facing + 1.3) * eyeDist;
@@ -5678,15 +5905,29 @@
         const rEx = headX + Math.cos(facing) * eyeFwd + Math.cos(facing - 1.3) * eyeDist;
         const rEy = headY + Math.sin(facing) * eyeFwd + Math.sin(facing - 1.3) * eyeDist;
         ctx.fillStyle = '#1a1a10';
-        ctx.beginPath();
-        ctx.arc(lEx, lEy, 1.2*s, 0, Math.PI*2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(rEx, rEy, 1.2*s, 0, Math.PI*2);
-        ctx.fill();
+        // Blink cycle: deterministic per-character, blinks for 3 ticks every ~150 ticks
+        const blinkSeed = (person.name.charCodeAt(0) || 65) * 137;
+        const blinkCycle = (gameTick * 0.5 + blinkSeed) % 150;
+        const isBlinking = blinkCycle < 3 || isSleeping;
+        if (isBlinking) {
+            // Closed eyes — horizontal lines
+            ctx.strokeStyle = '#1a1a10';
+            ctx.lineWidth = 1.2 * s;
+            ctx.beginPath();
+            ctx.moveTo(lEx - 1.2*s, lEy); ctx.lineTo(lEx + 1.2*s, lEy);
+            ctx.moveTo(rEx - 1.2*s, rEy); ctx.lineTo(rEx + 1.2*s, rEy);
+            ctx.stroke();
+        } else {
+            ctx.beginPath();
+            ctx.arc(lEx, lEy, 1.2*s, 0, Math.PI*2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(rEx, rEy, 1.2*s, 0, Math.PI*2);
+            ctx.fill();
+        }
 
         // Sleeping indicator
-        if (person.state === 'acting' && person.currentAction && (person.currentAction.id === 'sleep_house' || person.currentAction.id === 'sleep_self')) {
+        if (isSleeping) {
             const zt = gameTick * 0.04;
             ctx.font = `bold ${Math.round(12*s)}px 'Courier New','Microsoft YaHei','PingFang SC','Noto Sans SC',monospace`;
             ctx.fillStyle = `rgba(150,180,220,${0.5+Math.sin(zt)*0.3})`;
@@ -5695,7 +5936,7 @@
         }
 
         // Acting indicator
-        if (person.state === 'acting' && person.currentAction && person.currentAction.id !== 'sleep_house' && person.currentAction.id !== 'sleep_self') {
+        if (isActing) {
             const at = gameTick * 0.08;
             const sparkX = Math.cos(at) * 12 * s;
             const sparkY = Math.sin(at * 1.3) * 8 * s - 6 * s;
@@ -6134,8 +6375,11 @@
     }
 
     function drawDiscoveries(ctx) {
-        for (const disc of discoveries) {
-            if (disc.found) continue;
+        for (const disc of discoveries) drawDiscovery(ctx, disc);
+    }
+    function drawDiscovery(ctx, disc) {
+        {
+            if (disc.found) return;
             const x = disc.x * canvasScale;
             const y = disc.y * canvasScale;
             const s = canvasScale;
@@ -6983,7 +7227,10 @@
     }
 
     function drawWildlife(ctx) {
-        for (const a of wildlife) {
+        for (const a of wildlife) drawWildAnimal(ctx, a);
+    }
+    function drawWildAnimal(ctx, a) {
+        {
             const x = a.x * canvasScale;
             const y = a.y * canvasScale;
             const s = canvasScale;
@@ -7553,8 +7800,18 @@
 
         weatherParticles = weatherParticles.filter(p => {
             if (p.life !== undefined && p.life <= 0) return false;
-            return p.x >= -30 && p.x <= WORLD_W+30 && p.y >= -40 && p.y <= WORLD_H+20;
+            if (p.x < -30 || p.x > WORLD_W+30 || p.y < -40) return false;
+            // Rain splash on ground
+            if (currentWeather === 'rain' && p.y >= WORLD_H - 10 && rainSplashes.length < 30) {
+                rainSplashes.push({ x: p.x, y: WORLD_H - 5 + randFloat(-3, 3), life: 10, maxLife: 10 });
+                return false;
+            }
+            return p.y <= WORLD_H + 20;
         });
+
+        // Update rain splashes
+        for (const sp of rainSplashes) sp.life -= dt;
+        rainSplashes = rainSplashes.filter(sp => sp.life > 0);
     }
 
     function drawWeatherEffects(ctx) {
@@ -7603,47 +7860,141 @@
                 }
                 break;
         }
+
+        // Rain splashes on ground
+        if (rainSplashes.length > 0) {
+            ctx.strokeStyle = 'rgba(150,180,220,0.5)';
+            ctx.lineWidth = canvasScale * 0.5;
+            for (const sp of rainSplashes) {
+                const progress = 1 - sp.life / sp.maxLife;
+                const r = (2 + progress * 6) * canvasScale;
+                ctx.globalAlpha = weatherIntensity * (1 - progress) * 0.5;
+                ctx.beginPath();
+                ctx.arc(sp.x * canvasScale, sp.y * canvasScale, r, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
         ctx.restore();
     }
 
     function drawDayNightOverlay(ctx) {
         const cw = canvas.width / dpr;
         const ch = canvas.height / dpr;
-        let overlayColor = null;
-        let alpha = 0;
+        const s = canvasScale;
 
+        // Night overlay — gradient: darker sky, lighter ground (village glow)
         if (gameHour >= 20 || gameHour < 5) {
-            overlayColor = '20,20,60';
-            alpha = 0.45;
+            let alpha = 0.45;
             if (gameHour >= 20 && gameHour < 21) alpha = 0.45 * (gameHour - 20);
             if (gameHour >= 4 && gameHour < 5) alpha = 0.45 * (5 - gameHour);
-        } else if (gameHour >= 5 && gameHour < 7) {
-            overlayColor = '200,120,50';
-            alpha = 0.15 * (1 - (gameHour - 5) / 2);
-        } else if (gameHour >= 18 && gameHour < 20) {
-            overlayColor = '200,80,30';
-            alpha = 0.2 * ((gameHour - 18) / 2);
+            if (alpha > 0.01) {
+                ctx.save();
+                const grad = ctx.createLinearGradient(0, 0, 0, ch);
+                grad.addColorStop(0, `rgba(10,10,50,${alpha})`);
+                grad.addColorStop(0.6, `rgba(20,20,60,${alpha * 0.9})`);
+                grad.addColorStop(1, `rgba(30,25,50,${alpha * 0.7})`);
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, cw, ch);
+                ctx.restore();
+            }
         }
 
-        if (overlayColor && alpha > 0.01) {
-            ctx.save();
-            ctx.fillStyle = `rgba(${overlayColor},${alpha})`;
-            ctx.fillRect(0, 0, cw, ch);
-            ctx.restore();
+        // Sunrise — warm gradient near horizon
+        if (gameHour >= 5 && gameHour < 7) {
+            const alpha = 0.18 * (1 - (gameHour - 5) / 2);
+            if (alpha > 0.01) {
+                ctx.save();
+                const grad = ctx.createLinearGradient(0, 0, 0, ch);
+                grad.addColorStop(0, `rgba(220,160,80,${alpha * 0.3})`);
+                grad.addColorStop(0.4, `rgba(240,130,60,${alpha})`);
+                grad.addColorStop(1, `rgba(200,100,40,${alpha * 0.5})`);
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, cw, ch);
+                ctx.restore();
+            }
         }
 
-        // Stars at night
+        // Sunset — warm gradient, stronger near horizon
+        if (gameHour >= 18 && gameHour < 20) {
+            const alpha = 0.22 * ((gameHour - 18) / 2);
+            if (alpha > 0.01) {
+                ctx.save();
+                const grad = ctx.createLinearGradient(0, 0, 0, ch);
+                grad.addColorStop(0, `rgba(180,60,30,${alpha * 0.4})`);
+                grad.addColorStop(0.3, `rgba(220,90,30,${alpha})`);
+                grad.addColorStop(0.7, `rgba(200,70,20,${alpha * 0.8})`);
+                grad.addColorStop(1, `rgba(180,80,40,${alpha * 0.5})`);
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, cw, ch);
+                ctx.restore();
+            }
+        }
+
+        // Moon + Stars at night
         if (gameHour >= 21 || gameHour < 4) {
             const nightAlpha = gameHour >= 21 ? Math.min(1, (gameHour - 21) / 2) : gameHour < 3 ? 1 : (4 - gameHour);
             ctx.save();
-            ctx.fillStyle = '#fff';
-            const stars = [[50,20],[180,45],[340,15],[500,30],[650,50],[780,25],[120,60],[400,55],[600,10],[820,45],
-                           [70,35],[250,8],[460,48],[580,22],[720,55],[850,12],[160,52],[380,38],[530,5],[690,42]];
-            for (const [sx,sy] of stars) {
-                const twinkle = Math.sin(gameTick * 0.03 + sx * 0.1) * 0.5 + 0.5;
-                ctx.globalAlpha = nightAlpha * 0.4 * twinkle;
+
+            // Moon — simple lunar cycle based on game day
+            const moonPhase = gameDay % 8; // 0=new, 2=quarter, 4=full, 6=three-quarter
+            const moonX = 140 * s;
+            const moonY = 40 * s;
+            const moonR = 8 * s;
+            if (moonPhase !== 0) { // skip new moon
+                ctx.globalAlpha = nightAlpha * 0.7;
+                // Moon glow
+                const moonGrad = ctx.createRadialGradient(moonX, moonY, moonR * 0.5, moonX, moonY, moonR * 3);
+                moonGrad.addColorStop(0, 'rgba(200,210,230,0.12)');
+                moonGrad.addColorStop(1, 'rgba(200,210,230,0)');
+                ctx.fillStyle = moonGrad;
+                ctx.fillRect(moonX - moonR * 3, moonY - moonR * 3, moonR * 6, moonR * 6);
+                // Moon disc
+                ctx.globalAlpha = nightAlpha * 0.85;
+                ctx.fillStyle = '#e8e4d8';
                 ctx.beginPath();
-                ctx.arc(sx*canvasScale, sy*canvasScale, (1+twinkle)*canvasScale, 0, Math.PI*2);
+                ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+                ctx.fill();
+                // Crescent shadow (for non-full phases)
+                if (moonPhase !== 4) {
+                    const shadowOff = (moonPhase < 4 ? 1 : -1) * moonR * (1 - Math.abs(moonPhase - 4) / 4) * 1.5;
+                    ctx.fillStyle = 'rgba(10,10,50,0.85)';
+                    ctx.beginPath();
+                    ctx.arc(moonX + shadowOff, moonY, moonR * 0.92, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Milky Way band (very faint)
+            ctx.globalAlpha = nightAlpha * 0.04;
+            ctx.fillStyle = '#c0c8e0';
+            ctx.save();
+            ctx.translate(cw * 0.5, ch * 0.15);
+            ctx.rotate(-0.3);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, cw * 0.45, 20 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Stars — 40 positions
+            ctx.fillStyle = '#fff';
+            const stars = [
+                [50,20],[180,45],[340,15],[500,30],[650,50],[780,25],[120,60],[400,55],
+                [600,10],[820,45],[70,35],[250,8],[460,48],[580,22],[720,55],[850,12],
+                [160,52],[380,38],[530,5],[690,42],[30,50],[910,18],[280,28],[440,12],
+                [560,55],[740,8],[100,42],[320,52],[480,35],[620,58],[800,38],[950,30],
+                [200,15],[360,45],[510,20],[670,32],[760,52],[880,8],[140,30],[420,8]
+            ];
+            for (let i = 0; i < stars.length; i++) {
+                const [sx, sy] = stars[i];
+                const twinkle = Math.sin(gameTick * 0.03 + sx * 0.1 + i * 0.7) * 0.5 + 0.5;
+                // A few brighter "planet" stars
+                const isBright = i === 3 || i === 15 || i === 28;
+                const brightness = isBright ? 0.7 : 0.4;
+                ctx.globalAlpha = nightAlpha * brightness * twinkle;
+                const r = (isBright ? 1.5 + twinkle * 0.5 : 0.8 + twinkle * 0.7) * s;
+                ctx.beginPath();
+                ctx.arc(sx * s, sy * s, r, 0, Math.PI * 2);
                 ctx.fill();
             }
             ctx.restore();
@@ -7882,19 +8233,39 @@
 
         ctx.restore();
 
-        // --- Enhanced lantern glow at night / dusk ---
+        // --- Enhanced light sources at night / dusk ---
         if (isNight || isDusk) {
             const nightFactor = isNight ? 1.0 : (gameHour - 18) / 2;
             ctx.save();
             for (const obj of worldObjects) {
-                if (obj.type !== 'lantern_post') continue;
-                const lx = (obj.x + 8) * s;
-                const ly = (obj.y - obj.h/3 + 4) * s;
-                const r = 30 * s * nightFactor;
+                let lx, ly, r, col;
+                if (obj.type === 'lantern_post') {
+                    lx = (obj.x + 8) * s;
+                    ly = (obj.y - obj.h/3 + 4) * s;
+                    r = 30 * s * nightFactor;
+                    col = [255, 120, 40];
+                } else if (obj.type === 'kitchen') {
+                    lx = obj.x * s;
+                    ly = (obj.y - 5) * s;
+                    r = 40 * s * nightFactor;
+                    col = [255, 140, 50];
+                } else if (obj.type === 'teahouse') {
+                    lx = obj.x * s;
+                    ly = (obj.y - 8) * s;
+                    r = 35 * s * nightFactor;
+                    col = [255, 160, 80];
+                } else if (obj.type === 'shrine') {
+                    lx = obj.x * s;
+                    ly = (obj.y - 5) * s;
+                    r = 25 * s * nightFactor;
+                    col = [255, 100, 30];
+                } else {
+                    continue;
+                }
                 const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, r);
-                grad.addColorStop(0, `rgba(255,120,40,${0.18 * nightFactor})`);
-                grad.addColorStop(0.5, `rgba(255,90,30,${0.06 * nightFactor})`);
-                grad.addColorStop(1, 'rgba(255,80,20,0)');
+                grad.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${0.18 * nightFactor})`);
+                grad.addColorStop(0.5, `rgba(${col[0]},${col[1]-30},${col[2]-10},${0.06 * nightFactor})`);
+                grad.addColorStop(1, `rgba(${col[0]},${col[1]-30},${col[2]-20},0)`);
                 ctx.fillStyle = grad;
                 ctx.fillRect(lx - r, ly - r, r*2, r*2);
             }
@@ -8606,6 +8977,158 @@
     }
 
     // ============================================================
+    //  SAVE / LOAD SYSTEM (localStorage)
+    // ============================================================
+    const SAVE_KEY = 'longmen_save';
+    const AUTOSAVE_INTERVAL = 60000; // 60 seconds
+
+    function buildSaveData() {
+        return {
+            version: 2,
+            time: { gameDay, gameHour, gameMinute, gameTick },
+            persons: persons.map(p => ({
+                name: p.name, role: p.role, color: p.color,
+                geschick: p.geschick, neugier: p.neugier,
+                geselligkeit: p.geselligkeit, wahrnehmung: p.wahrnehmung,
+                x: p.x, y: p.y, facing: p.facing,
+                hunger: p.hunger, thirst: p.thirst, energy: p.energy,
+                knownWords: [...p.knownWords],
+                wordHistory: p.wordHistory.slice(),
+                relationships: { ...p.relationships },
+                skinTone: p.skinTone, hairColor: p.hairColor, clothColor: p.clothColor,
+                actionHistory: p.actionHistory.slice(),
+                followMode: p.followMode,
+            })),
+            npcs: npcs.map(n => ({
+                name: n.name, x: n.x, y: n.y, speed: n.speed, facing: n.facing,
+                relationships: { ...n.relationships },
+                skinTone: n.skinTone, hairColor: n.hairColor, clothColor: n.clothColor, color: n.color,
+            })),
+            campProgress: { ...campProgress },
+            campMilestonesHit: [...campMilestonesHit],
+            proverbMilestonesHit: [...proverbMilestonesHit],
+            discoveredTypes: [...discoveredTypes],
+            weather: { currentWeather, weatherIntensity },
+            storytellingCooldownDay: storytelling.cooldownDay,
+            eventLog: eventLog.slice(0, 50),
+        };
+    }
+
+    function saveGame() {
+        try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(buildSaveData()));
+            return true;
+        } catch (e) {
+            console.warn('Save failed:', e);
+            return false;
+        }
+    }
+
+    function loadSaveData() {
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            if (!data || !data.version || !data.persons || data.persons.length < 2) return null;
+            return data;
+        } catch (e) {
+            console.warn('Load failed:', e);
+            return null;
+        }
+    }
+
+    function applySaveData(data) {
+        // Time
+        gameDay = data.time.gameDay;
+        gameHour = data.time.gameHour;
+        gameMinute = data.time.gameMinute;
+        gameTick = data.time.gameTick || 0;
+
+        // Persons
+        persons = [];
+        for (const pd of data.persons) {
+            const p = new Person(pd.name, pd.role, pd.color);
+            p.geschick = pd.geschick; p.neugier = pd.neugier;
+            p.geselligkeit = pd.geselligkeit; p.wahrnehmung = pd.wahrnehmung;
+            p.x = pd.x; p.y = pd.y; p.targetX = pd.x; p.targetY = pd.y;
+            p.facing = pd.facing || 0;
+            p.hunger = pd.hunger; p.thirst = pd.thirst; p.energy = pd.energy;
+            p.knownWords = new Set(pd.knownWords || []);
+            p.wordHistory = pd.wordHistory || [];
+            p.relationships = pd.relationships || {};
+            p.skinTone = pd.skinTone; p.hairColor = pd.hairColor; p.clothColor = pd.clothColor;
+            p.actionHistory = pd.actionHistory || [];
+            p.followMode = pd.followMode || 'following';
+            persons.push(p);
+        }
+
+        // NPCs
+        npcs = [];
+        for (const nd of data.npcs) {
+            const n = new NPC(nd.name);
+            n.x = nd.x; n.y = nd.y; n.targetX = nd.x; n.targetY = nd.y;
+            n.speed = nd.speed; n.facing = nd.facing || 0;
+            n.relationships = nd.relationships || {};
+            n.skinTone = nd.skinTone; n.hairColor = nd.hairColor;
+            n.clothColor = nd.clothColor; n.color = nd.color;
+            npcs.push(n);
+        }
+
+        // Camp
+        campProgress = data.campProgress || {};
+        campMilestonesHit = new Set(data.campMilestonesHit || []);
+        campDecorations = [];
+        for (const m of CAMP_MILESTONES) {
+            if (campMilestonesHit.has(m.id)) {
+                campDecorations.push({ id: m.id, x: m.x, y: m.y });
+            }
+        }
+
+        // Proverbs & discoveries
+        proverbMilestonesHit = new Set(data.proverbMilestonesHit || []);
+        discoveredTypes = new Set(data.discoveredTypes || []);
+
+        // Weather
+        if (data.weather) {
+            currentWeather = data.weather.currentWeather || 'clear';
+            weatherIntensity = data.weather.weatherIntensity || 0;
+            targetWeatherIntensity = weatherIntensity;
+        }
+
+        // Storytelling
+        storytelling.cooldownDay = data.storytellingCooldownDay || -1;
+
+        // Event log
+        eventLog = data.eventLog || [];
+    }
+
+    function deleteSave() {
+        localStorage.removeItem(SAVE_KEY);
+    }
+
+    function setupAutosave() {
+        setInterval(() => {
+            if (gameSpeed > 0) saveGame();
+        }, AUTOSAVE_INTERVAL);
+        window.addEventListener('beforeunload', saveGame);
+    }
+
+    function manualSave() {
+        if (saveGame()) {
+            addLog('Spielstand gespeichert.', 'speak');
+            const btn = document.getElementById('btn-save');
+            btn.style.borderColor = '#6a8a5a';
+            setTimeout(() => { btn.style.borderColor = ''; }, 800);
+        }
+    }
+
+    function newGame() {
+        if (!confirm('Neues Spiel starten? Der aktuelle Fortschritt geht verloren.')) return;
+        deleteSave();
+        location.reload();
+    }
+
+    // ============================================================
     //  INITIALIZATION
     // ============================================================
     function init() {
@@ -8619,37 +9142,42 @@
         worldObjects = OBJECT_DEFS.map(d => ({ ...d }));
 
         // Cache frequently-looked-up objects
-        cachedTeahouse = cachedTeahouse || null;
+        cachedTeahouse = worldObjects.find(o => o.type === 'teahouse') || null;
         cachedBuildingObjects = worldObjects.filter(o => BUILDING_TYPES.includes(o.type));
 
-        // Create persons
-        const speakerPool = [...SPEAKER_NAMES];
-        const learnerPool = [...LEARNER_NAMES];
-        const npcPool = [...NPC_NAMES];
-        const name1 = speakerPool.splice(randInt(0, speakerPool.length - 1), 1)[0];
-        const name2 = learnerPool.splice(randInt(0, learnerPool.length - 1), 1)[0];
+        // Try to load saved game
+        const saveData = loadSaveData();
+        if (saveData) {
+            applySaveData(saveData);
+            addLog('Spielstand geladen.', 'speak');
+        } else {
+            // Create fresh game
+            const speakerPool = [...SPEAKER_NAMES];
+            const learnerPool = [...LEARNER_NAMES];
+            const npcPool = [...NPC_NAMES];
+            const name1 = speakerPool.splice(randInt(0, speakerPool.length - 1), 1)[0];
+            const name2 = learnerPool.splice(randInt(0, learnerPool.length - 1), 1)[0];
 
-        const p1 = new Person(name1, 'speaker', '#5a8aaa');
-        const p2 = new Person(name2, 'learner', '#aa7a4a');
+            const p1 = new Person(name1, 'speaker', '#5a8aaa');
+            const p2 = new Person(name2, 'learner', '#aa7a4a');
 
-        // Learner dexterity must be at least as high as speaker's (so learner can keep up)
-        if (p2.geschick < p1.geschick) {
-            p2.geschick = randInt(p1.geschick, 10);
+            if (p2.geschick < p1.geschick) {
+                p2.geschick = randInt(p1.geschick, 10);
+            }
+
+            persons = [p1, p2];
+
+            const npcCount = randInt(2, 5);
+            for (let i = 0; i < npcCount; i++) {
+                const npcName = npcPool.splice(randInt(0, npcPool.length - 1), 1)[0];
+                npcs.push(new NPC(npcName));
+            }
+
+            addLog(`${p1.name} (Einheimischer) — Ges:${p1.geschick} Neu:${p1.neugier} Soz:${p1.geselligkeit} Wah:${p1.wahrnehmung}`, 'speak');
+            addLog(`${p2.name} (Reisender) — Ges:${p2.geschick} Neu:${p2.neugier} Soz:${p2.geselligkeit} Wah:${p2.wahrnehmung}`, 'learn');
+            addLog(`${npcCount} weitere Stadtbewohner sind anwesend.`, 'speak');
+            addLog('Willkommen in Longmen! Die Simulation beginnt...', 'speak');
         }
-
-        persons = [p1, p2];
-
-        // Create background NPCs (2-5 villagers)
-        const npcCount = randInt(2, 5);
-        for (let i = 0; i < npcCount; i++) {
-            const npcName = npcPool.splice(randInt(0, npcPool.length - 1), 1)[0];
-            npcs.push(new NPC(npcName));
-        }
-
-        addLog(`${p1.name} (Einheimischer) — Ges:${p1.geschick} Neu:${p1.neugier} Soz:${p1.geselligkeit} Wah:${p1.wahrnehmung}`, 'speak');
-        addLog(`${p2.name} (Reisender) — Ges:${p2.geschick} Neu:${p2.neugier} Soz:${p2.geselligkeit} Wah:${p2.wahrnehmung}`, 'learn');
-        addLog(`${npcCount} weitere Stadtbewohner sind anwesend.`, 'speak');
-        addLog('Willkommen in Longmen! Die Simulation beginnt...', 'speak');
 
         // Spawn initial wildlife
         spawnWildlife();
@@ -8658,9 +9186,10 @@
         discoveryTimer = randFloat(5000, 12000);
 
         // Initial panel render
-        renderCharPanel('char1-panel', p1);
-        renderCharPanel('char2-panel', p2);
+        renderCharPanel('char1-panel', persons[0]);
+        renderCharPanel('char2-panel', persons[1]);
         renderVocabPanel();
+        renderLog();
 
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
@@ -8673,6 +9202,9 @@
                 handleCanvasClick({ clientX: touch.clientX, clientY: touch.clientY });
             }
         });
+
+        // Start autosave
+        setupAutosave();
 
         // Start game loop
         requestAnimationFrame(gameLoop);
@@ -8788,12 +9320,30 @@
         // Render
         ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
         drawTerrain(ctx);
-        for (const obj of worldObjects) drawObject(ctx, obj);
-        drawCampDecorations(ctx);
-        drawDiscoveries(ctx);
-        drawWildlife(ctx);
-        for (const npc of npcs) drawPerson(ctx, npc);
-        for (const p of persons) drawPerson(ctx, p);
+
+        // Y-sorted scene drawing — build draw list, sort by depth
+        const drawList = [];
+        for (const obj of worldObjects) {
+            const isGround = GROUND_TYPES.includes(obj.type);
+            drawList.push({ sortY: isGround ? -1e6 : obj.y + (VISUAL_BOTTOM[obj.type] || obj.h / 2), type: 'obj', ref: obj });
+        }
+        for (const d of campDecorations) drawList.push({ sortY: d.y + 8, type: 'camp', ref: d });
+        for (const disc of discoveries) {
+            if (!disc.found) drawList.push({ sortY: disc.y, type: 'disc', ref: disc });
+        }
+        for (const a of wildlife) drawList.push({ sortY: a.y, type: 'wild', ref: a });
+        for (const npc of npcs) drawList.push({ sortY: npc.y, type: 'char', ref: npc });
+        for (const p of persons) drawList.push({ sortY: p.y, type: 'char', ref: p });
+        drawList.sort((a, b) => a.sortY - b.sortY);
+        for (const item of drawList) {
+            switch (item.type) {
+                case 'obj': drawObject(ctx, item.ref); break;
+                case 'camp': drawCampDecoration(ctx, item.ref); break;
+                case 'disc': drawDiscovery(ctx, item.ref); break;
+                case 'wild': drawWildAnimal(ctx, item.ref); break;
+                case 'char': drawPerson(ctx, item.ref); break;
+            }
+        }
         drawFreezeIndicator(ctx, persons[1]);
         drawRelationshipIndicators(ctx);
         for (const f of learnFlashes) f.draw(ctx);
