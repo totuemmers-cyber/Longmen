@@ -26,8 +26,9 @@
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
         #header {
-            background: #111;
-            border-bottom: 2px solid #4a2020;
+            background: linear-gradient(180deg, #1a1008 0%, #12100a 100%);
+            border-bottom: 2px solid #6a2020;
+            border-image: linear-gradient(90deg, #4a2020, #8a3030, #4a2020) 1;
             padding: 6px 16px;
             display: flex;
             align-items: center;
@@ -94,13 +95,17 @@
         }
         #panel {
             width: 300px;
-            background: #1e1a14;
-            border-left: 2px solid #3a3226;
+            background: linear-gradient(135deg, #1e1a14 0%, #221c12 50%, #1e1a14 100%);
+            border-left: 2px solid #5a3020;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding: 0;
             font-size: 12px;
             flex-shrink: 0;
+            background-image:
+                linear-gradient(135deg, #1e1a14 0%, #221c12 50%, #1e1a14 100%),
+                radial-gradient(ellipse at 30% 20%, rgba(200,180,140,0.03) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(200,180,140,0.02) 0%, transparent 50%);
         }
         #panel-toggle {
             display: none;
@@ -152,14 +157,24 @@
         }
         .panel-section {
             border-bottom: 1px solid #2a2420;
+            border-image: linear-gradient(90deg, transparent, #3a2a1a, #4a3020, #3a2a1a, transparent) 1;
             padding: 10px 12px;
+            position: relative;
         }
         .panel-section h2 {
             font-size: 12px;
             color: #d4a030;
             margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            text-align: center;
+            position: relative;
+        }
+        .panel-section h2::before, .panel-section h2::after {
+            content: '◆';
+            font-size: 6px;
+            color: #6a3020;
+            vertical-align: middle;
+            margin: 0 6px;
         }
         .char-header {
             display: flex;
@@ -170,8 +185,9 @@
         .char-portrait {
             width: 40px;
             height: 40px;
-            border-radius: 4px;
-            border: 2px solid #4a3e30;
+            border-radius: 2px;
+            border: 2px solid #6a3020;
+            box-shadow: inset 0 0 8px rgba(160,120,60,0.15), 0 0 4px rgba(100,40,20,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -273,15 +289,28 @@
             width: 100%;
             height: 10px;
             background: #0a0a08;
-            border-radius: 2px;
+            border: 1px solid #2a2018;
+            border-radius: 1px;
             overflow: hidden;
             margin-bottom: 8px;
         }
         .progress-bar {
             height: 100%;
-            background: #6a8a5a;
-            border-radius: 2px;
+            background: linear-gradient(90deg, #4a6a3a, #6a8a5a, #4a6a3a);
+            border-radius: 1px;
             transition: width 0.5s;
+        }
+        .seal-stamp {
+            display: inline-block;
+            color: #a03020;
+            border: 1.5px solid #a03020;
+            padding: 1px 3px;
+            font-size: 9px;
+            line-height: 1;
+            margin-left: 6px;
+            transform: rotate(-3deg);
+            opacity: 0.7;
+            font-family: 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif;
         }
         #event-log {
             max-height: 180px;
@@ -322,13 +351,13 @@
             <div id="char1-panel" class="panel-section"></div>
             <div id="char2-panel" class="panel-section"></div>
             <div id="vocab-panel" class="panel-section">
-                <h2>Vokabular</h2>
+                <h2>Vokabular<span class="seal-stamp">词</span></h2>
                 <div class="progress-text" id="vocab-progress">0 / 0 Wörter gelernt</div>
                 <div class="progress-bar-bg"><div class="progress-bar" id="vocab-bar" style="width:0%"></div></div>
                 <div class="vocab-list" id="vocab-list"></div>
             </div>
             <div class="panel-section">
-                <h2>Ereignisse</h2>
+                <h2>Ereignisse<span class="seal-stamp">记</span></h2>
                 <div id="event-log"></div>
             </div>
         </div>
@@ -396,6 +425,7 @@
     function stopChineseMusic() {
         if (!musicPlaying) return;
         musicPlaying = false;
+        stopSeasonalAmbient();
         for (const node of musicNodes) {
             try {
                 if (node.stop) node.stop();
@@ -581,8 +611,119 @@
         scheduleMoodCheck();
     }
 
+    // === SEASONAL AMBIENT SOUNDSCAPE ===
+    let seasonalAmbientNodes = [];
+    let currentAmbientSeason = null;
+
+    function updateSeasonalAmbient() {
+        if (!audioCtx || !musicPlaying || !soundEnabled) return;
+        const season = getSeason ? getSeason() : 'spring';
+        if (season === currentAmbientSeason) return;
+        // Stop old seasonal sounds
+        for (const n of seasonalAmbientNodes) {
+            try { if (n.stop) n.stop(); } catch(_) {}
+            try { n.disconnect(); } catch(_) {}
+        }
+        seasonalAmbientNodes = [];
+        currentAmbientSeason = season;
+
+        const dest = musicGainNode || audioMaster;
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.06;
+        gain.connect(dest);
+        seasonalAmbientNodes.push(gain);
+
+        if (season === 'spring') {
+            // Bird chirps — high-freq filtered noise bursts
+            const birdGain = audioCtx.createGain();
+            birdGain.gain.value = 0.4;
+            birdGain.connect(gain);
+            seasonalAmbientNodes.push(birdGain);
+            (function scheduleBirdChirp() {
+                if (!musicPlaying || currentAmbientSeason !== 'spring') return;
+                const t = audioCtx.currentTime;
+                const freq = 2800 + Math.random() * 1200;
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+                osc.frequency.linearRampToValueAtTime(freq * 1.3, t + 0.05);
+                osc.frequency.linearRampToValueAtTime(freq * 0.9, t + 0.12);
+                const g = audioCtx.createGain();
+                g.gain.setValueAtTime(0, t);
+                g.gain.linearRampToValueAtTime(0.3, t + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+                osc.connect(g);
+                g.connect(birdGain);
+                osc.start(t);
+                osc.stop(t + 0.15);
+                setTimeout(scheduleBirdChirp, 2000 + Math.random() * 5000);
+            })();
+        } else if (season === 'summer') {
+            // Cicadas — sustained high-freq buzz
+            const cicada = audioCtx.createOscillator();
+            cicada.type = 'sawtooth';
+            cicada.frequency.value = 4200;
+            const cicadaFilt = audioCtx.createBiquadFilter();
+            cicadaFilt.type = 'bandpass';
+            cicadaFilt.frequency.value = 4500;
+            cicadaFilt.Q.value = 8;
+            const cicadaGain = audioCtx.createGain();
+            cicadaGain.gain.value = 0.08;
+            cicada.connect(cicadaFilt);
+            cicadaFilt.connect(cicadaGain);
+            cicadaGain.connect(gain);
+            // Pulsing LFO for cicada rhythm
+            const lfo = audioCtx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.3;
+            const lfoG = audioCtx.createGain();
+            lfoG.gain.value = 0.04;
+            lfo.connect(lfoG);
+            lfoG.connect(cicadaGain.gain);
+            cicada.start();
+            lfo.start();
+            seasonalAmbientNodes.push(cicada, cicadaFilt, cicadaGain, lfo, lfoG);
+        } else if (season === 'autumn') {
+            // Wind through dry leaves — filtered noise
+            const windNoise = audioCtx.createBufferSource();
+            windNoise.buffer = createNoiseBuffer(10);
+            windNoise.loop = true;
+            const windFilt = audioCtx.createBiquadFilter();
+            windFilt.type = 'bandpass';
+            windFilt.frequency.value = 600;
+            windFilt.Q.value = 0.5;
+            const windGain = audioCtx.createGain();
+            windGain.gain.value = 0.15;
+            windNoise.connect(windFilt);
+            windFilt.connect(windGain);
+            windGain.connect(gain);
+            // Slow sweep for rustling effect
+            const sweepLfo = audioCtx.createOscillator();
+            sweepLfo.type = 'sine';
+            sweepLfo.frequency.value = 0.08;
+            const sweepG = audioCtx.createGain();
+            sweepG.gain.value = 300;
+            sweepLfo.connect(sweepG);
+            sweepG.connect(windFilt.frequency);
+            windNoise.start();
+            sweepLfo.start();
+            seasonalAmbientNodes.push(windNoise, windFilt, windGain, sweepLfo, sweepG);
+        }
+        // Winter: intentional near-silence — just the existing music, no added ambient
+    }
+
+    function stopSeasonalAmbient() {
+        for (const n of seasonalAmbientNodes) {
+            try { if (n.stop) n.stop(); } catch(_) {}
+            try { n.disconnect(); } catch(_) {}
+        }
+        seasonalAmbientNodes = [];
+        currentAmbientSeason = null;
+    }
+
     function scheduleMoodCheck() {
         if (!musicPlaying) return;
+        updateSeasonalAmbient();
         const newMood = getMusicMood();
         if (newMood !== currentMood) {
             currentMood = newMood;
@@ -2248,6 +2389,13 @@
         { id: 'float',     hanzi: '浮',   pinyin: 'fú',        de: 'schweben',      type: 'verb' },
         { id: 'blow',      hanzi: '吹',   pinyin: 'chuī',      de: 'blasen',        type: 'verb' },
         { id: 'wet',       hanzi: '湿',   pinyin: 'shī',       de: 'nass',          type: 'mod' },
+        // ── Festival vocab ──
+        { id: 'festival',  hanzi: '节',   pinyin: 'jié',       de: 'Fest',          type: 'noun' },
+        { id: 'dragon',    hanzi: '龙',   pinyin: 'lóng',      de: 'Drache',        type: 'noun' },
+        { id: 'mooncake',  hanzi: '月饼', pinyin: 'yuèbǐng',   de: 'Mondkuchen',    type: 'noun' },
+        { id: 'celebrate', hanzi: '庆祝', pinyin: 'qìngzhù',   de: 'feiern',        type: 'verb' },
+        { id: 'lucky',     hanzi: '福',   pinyin: 'fú',        de: 'Glueck',        type: 'noun' },
+        { id: 'together2', hanzi: '团圆', pinyin: 'tuányuán',   de: 'Wiedersehen',   type: 'noun' },
     ];
 
     function buildVocab() {
@@ -3221,6 +3369,25 @@
             effects: {}, priority: 'social', requiresOther: true,
             activityDe: 'erklaert Gewohnheiten', visibleConcepts: ['habit','every','day','year','today','yesterday','already','still','also','really','joyful']
         },
+        // === FESTIVAL ACTIONS ===
+        {
+            id: 'hang_festival_lantern', target: 'lantern_post', duration: 120,
+            templates: [['celebrate','festival','lantern'],['lantern','red','beautiful'],['festival','happy','together']],
+            effects: {}, priority: 'productive',
+            activityDe: 'haengt Festlaternen auf', visibleConcepts: ['celebrate','festival','lantern','red','beautiful','hang','happy','lucky','night']
+        },
+        {
+            id: 'eat_mooncake', target: 'teahouse', duration: 100,
+            templates: [['eat','mooncake','good'],['mooncake','sweet','round'],['festival','together2','happy']],
+            effects: { hunger: 20 }, priority: 'idle',
+            activityDe: 'isst Mondkuchen', visibleConcepts: ['eat','mooncake','sweet','round','moon','festival','together2','happy','tea']
+        },
+        {
+            id: 'watch_dragon_boat', target: 'dock', duration: 150,
+            templates: [['look','dragon','boat'],['dragon','boat','fast'],['celebrate','festival','river']],
+            effects: {}, priority: 'idle',
+            activityDe: 'schaut Drachenbooten zu', visibleConcepts: ['look','dragon','boat','fast','river','celebrate','festival','water','happy','sound']
+        },
         // === EXPANSION: UNDERUTILIZED OBJECT ACTIONS ===
         // lantern_post (was 0 actions)
         {
@@ -3362,6 +3529,199 @@
             activityDe: 'malt den Lotus', visibleConcepts: ['paint','lotus','beautiful','water','picture','quiet','float','red']
         },
     ];
+
+    // ============================================================
+    //  CHENGYU (成语) SYSTEM — situational four-character idioms
+    // ============================================================
+    const CHENGYU_TRIGGERS = [
+        { id: 'friendship',  chars: '情同手足', pinyin: 'qíng tóng shǒu zú',     de: 'Freunde wie Brueder', check: () => { const r = persons[0].relationships[persons[1].name] || 0; return r >= 60; } },
+        { id: 'hardwork',    chars: '勤劳致富', pinyin: 'qín láo zhì fù',          de: 'Fleiss fuehrt zum Wohlstand', check: () => campMilestonesHit.size >= 5 },
+        { id: 'nature',      chars: '山清水秀', pinyin: 'shān qīng shuǐ xiù',     de: 'Klare Berge, schoenes Wasser', check: () => gameHour >= 6 && gameHour < 8 && currentWeather === 'clear' && Math.random() < 0.0001 },
+        { id: 'persevere',   chars: '锲而不舍', pinyin: 'qiè ér bù shě',          de: 'Beharrlich und unaufhoerlich', check: () => persons[1].knownWords.size >= 80 },
+        { id: 'harmony',     chars: '和气生财', pinyin: 'hé qì shēng cái',         de: 'Harmonie bringt Wohlstand', check: () => npcs.filter(n => (n.relationships[persons[0].name] || 0) > 30).length >= 3 },
+        { id: 'moonlight',   chars: '花好月圆', pinyin: 'huā hǎo yuè yuán',       de: 'Blumen bluehen, Mond ist voll', check: () => gameHour >= 21 && gameDay % 8 === 4 && currentWeather === 'clear' },
+        { id: 'rain',        chars: '风调雨顺', pinyin: 'fēng tiáo yǔ shùn',       de: 'Guter Wind, rechter Regen', check: () => currentWeather === 'rain' && weatherIntensity > 0.5 && Math.random() < 0.0002 },
+        { id: 'village',     chars: '安居乐业', pinyin: 'ān jū lè yè',             de: 'Friedlich wohnen, froh arbeiten', check: () => gameDay >= 15 && persons[1].knownWords.size >= 40 },
+    ];
+    let chengyuTriggered = new Set();
+    let chengyuOverlay = null;
+
+    // ============================================================
+    //  SEASONAL FESTIVALS (节日)
+    // ============================================================
+    const FESTIVALS = [
+        { id: 'lantern',    name: '元宵节', pinyin: 'Yuánxiāo Jié', de: 'Laternenfest',        dayInCycle: 5,  season: 'spring' },
+        { id: 'dragonboat', name: '端午节', pinyin: 'Duānwǔ Jié',   de: 'Drachenbootfest',     dayInCycle: 15, season: 'summer' },
+        { id: 'midautumn',  name: '中秋节', pinyin: 'Zhōngqiū Jié', de: 'Mondfest',            dayInCycle: 25, season: 'autumn' },
+    ];
+
+    let activeFestival = null;
+    let festivalParticles = [];
+
+    function checkFestival() {
+        const dayInCycle = ((gameDay - 1) % 40) + 1;
+        const prev = activeFestival;
+        activeFestival = FESTIVALS.find(f => f.dayInCycle === dayInCycle) || null;
+        if (activeFestival && activeFestival !== prev) {
+            addLog(`🏮 ${activeFestival.name} (${activeFestival.de}) beginnt!`, 'speak');
+            festivalParticles = [];
+        }
+        if (!activeFestival) festivalParticles = [];
+    }
+
+    function updateFestivalParticles(dt) {
+        if (!activeFestival) return;
+        const maxP = 20;
+        // Spawn festival-specific particles
+        if (festivalParticles.length < maxP && Math.random() < 0.03 * dt) {
+            if (activeFestival.id === 'lantern') {
+                // Floating sky lanterns
+                festivalParticles.push({
+                    type: 'skylantern', x: randFloat(50, WORLD_W - 50), y: WORLD_H + 10,
+                    vx: randFloat(-0.1, 0.1), vy: randFloat(-0.5, -0.3),
+                    size: randFloat(4, 7), glow: randFloat(0.4, 0.8), life: randFloat(400, 700)
+                });
+            } else if (activeFestival.id === 'dragonboat') {
+                // Splashing water drops from dragon boats
+                festivalParticles.push({
+                    type: 'dbsplash', x: randFloat(710, 790), y: randFloat(200, 500),
+                    vx: randFloat(-1, 1), vy: randFloat(-2, -0.5),
+                    size: randFloat(1, 3), life: randFloat(30, 60)
+                });
+            } else if (activeFestival.id === 'midautumn') {
+                // Floating mooncakes / glowing orbs
+                festivalParticles.push({
+                    type: 'moonorb', x: randFloat(50, WORLD_W - 50), y: randFloat(20, 80),
+                    phase: randFloat(0, Math.PI * 2), size: randFloat(2, 4),
+                    life: randFloat(200, 400), maxLife: 0
+                });
+                festivalParticles[festivalParticles.length - 1].maxLife = festivalParticles[festivalParticles.length - 1].life;
+            }
+        }
+        // Update particles
+        for (const p of festivalParticles) {
+            p.life -= dt;
+            p.x += (p.vx || 0) * dt;
+            p.y += (p.vy || 0) * dt;
+            if (p.type === 'skylantern') p.vx += Math.sin(gameTick * 0.01 + p.x * 0.05) * 0.002 * dt;
+            if (p.type === 'dbsplash') p.vy += 0.05 * dt; // gravity
+        }
+        festivalParticles = festivalParticles.filter(p => p.life > 0 && p.y > -30 && p.y < WORLD_H + 30);
+    }
+
+    function drawFestivalEffects(ctx) {
+        if (!activeFestival || festivalParticles.length === 0) return;
+        const s = canvasScale;
+        ctx.save();
+        for (const p of festivalParticles) {
+            if (p.type === 'skylantern') {
+                // Warm glowing lantern
+                const a = Math.min(1, p.life / 60);
+                const grad = ctx.createRadialGradient(p.x*s, p.y*s, 0, p.x*s, p.y*s, p.size*2*s);
+                grad.addColorStop(0, `rgba(255,140,40,${a * p.glow * 0.25})`);
+                grad.addColorStop(1, 'rgba(255,100,20,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect((p.x - p.size*2)*s, (p.y - p.size*2)*s, p.size*4*s, p.size*4*s);
+                // Lantern body
+                ctx.fillStyle = `rgba(220,80,30,${a * 0.7})`;
+                ctx.beginPath();
+                ctx.ellipse(p.x*s, p.y*s, p.size*0.8*s, p.size*s, 0, 0, Math.PI*2);
+                ctx.fill();
+                // Inner glow
+                ctx.fillStyle = `rgba(255,200,100,${a * 0.5})`;
+                ctx.beginPath();
+                ctx.ellipse(p.x*s, p.y*s, p.size*0.4*s, p.size*0.5*s, 0, 0, Math.PI*2);
+                ctx.fill();
+            } else if (p.type === 'dbsplash') {
+                ctx.globalAlpha = Math.min(1, p.life / 15);
+                ctx.fillStyle = 'rgba(150,200,240,0.6)';
+                ctx.beginPath();
+                ctx.arc(p.x*s, p.y*s, p.size*s, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            } else if (p.type === 'moonorb') {
+                const fadeIn = Math.min(1, (p.maxLife - p.life) / 40);
+                const fadeOut = Math.min(1, p.life / 40);
+                const a = fadeIn * fadeOut * (0.3 + Math.sin(p.phase + gameTick * 0.02) * 0.15);
+                ctx.fillStyle = `rgba(255,230,180,${a})`;
+                ctx.beginPath();
+                ctx.arc((p.x + Math.sin(gameTick*0.008 + p.phase)*15)*s, p.y*s, p.size*s, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        // Festival banner at top
+        if (activeFestival) {
+            const bannerAlpha = 0.6 + Math.sin(gameTick * 0.03) * 0.1;
+            const cw = canvas.width / dpr;
+            ctx.globalAlpha = bannerAlpha;
+            ctx.font = `bold ${Math.round(10*s)}px 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif`;
+            ctx.fillStyle = '#d4a030';
+            ctx.textAlign = 'right';
+            ctx.fillText(`${activeFestival.name} ${activeFestival.pinyin}`, cw - 10*s, 14*s);
+            ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+    }
+
+    class ChengyuCloud {
+        constructor(chengyu) {
+            this.chars = chengyu.chars;
+            this.pinyin = chengyu.pinyin;
+            this.de = chengyu.de;
+            this.life = 300;
+            this.maxLife = 300;
+        }
+        update(dt) {
+            this.life -= dt;
+            return this.life > 0;
+        }
+        draw(ctx) {
+            const cw = canvas.width / dpr;
+            const s = canvasScale;
+            const fadeIn = Math.min(1, (this.maxLife - this.life) / 40);
+            const fadeOut = Math.min(1, this.life / 40);
+            const alpha = fadeIn * fadeOut;
+            const cy = 50 * s + Math.sin(gameTick * 0.015) * 4 * s;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            // Cloud background
+            ctx.fillStyle = 'rgba(30,25,15,0.6)';
+            const tw = this.chars.length * 18 * s + 40 * s;
+            const cx = cw / 2;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, tw / 2, 22 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Gold border
+            ctx.strokeStyle = `rgba(180,130,40,${alpha * 0.5})`;
+            ctx.lineWidth = 1 * s;
+            ctx.stroke();
+            // Characters
+            ctx.font = `bold ${Math.round(16*s)}px 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif`;
+            ctx.fillStyle = '#e8d080';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.chars, cx, cy - 3 * s);
+            // Pinyin + German
+            ctx.font = `${Math.round(8*s)}px 'Courier New','Microsoft YaHei',monospace`;
+            ctx.fillStyle = '#a09070';
+            ctx.fillText(this.pinyin + ' — ' + this.de, cx, cy + 12 * s);
+            ctx.restore();
+        }
+    }
+
+    function checkChengyuTriggers() {
+        if (chengyuOverlay) return; // one at a time
+        for (const c of CHENGYU_TRIGGERS) {
+            if (chengyuTriggered.has(c.id)) continue;
+            if (c.check()) {
+                chengyuTriggered.add(c.id);
+                chengyuOverlay = new ChengyuCloud(c);
+                addLog(`成语: ${c.chars} — ${c.de}`, 'learn');
+                break;
+            }
+        }
+    }
 
     // ============================================================
     //  GAME STATE
@@ -4502,7 +4862,39 @@
             ctx.fill();
         }
 
-        // Rolling green hills in background
+        // Distant mountain silhouettes (水墨画 ink wash style)
+        ctx.save();
+        // Far mountains — very faint, bluish-grey
+        ctx.fillStyle = 'rgba(60,80,70,0.18)';
+        ctx.beginPath();
+        ctx.moveTo(0, 30 * s);
+        ctx.quadraticCurveTo(60 * s, -20 * s, 150 * s, 25 * s);
+        ctx.quadraticCurveTo(200 * s, -10 * s, 280 * s, 20 * s);
+        ctx.quadraticCurveTo(350 * s, -30 * s, 420 * s, 15 * s);
+        ctx.lineTo(420 * s, 50 * s);
+        ctx.lineTo(0, 50 * s);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(50,70,60,0.15)';
+        ctx.beginPath();
+        ctx.moveTo(400 * s, 25 * s);
+        ctx.quadraticCurveTo(500 * s, -25 * s, 600 * s, 18 * s);
+        ctx.quadraticCurveTo(680 * s, -15 * s, 780 * s, 22 * s);
+        ctx.quadraticCurveTo(880 * s, -20 * s, 1000 * s, 20 * s);
+        ctx.lineTo(1000 * s, 55 * s);
+        ctx.lineTo(400 * s, 55 * s);
+        ctx.closePath();
+        ctx.fill();
+        // Mist between mountains and village
+        const mistGrad = ctx.createLinearGradient(0, 20 * s, 0, 70 * s);
+        mistGrad.addColorStop(0, 'rgba(200,200,190,0.08)');
+        mistGrad.addColorStop(0.5, 'rgba(200,200,190,0.12)');
+        mistGrad.addColorStop(1, 'rgba(200,200,190,0)');
+        ctx.fillStyle = mistGrad;
+        ctx.fillRect(0, 20 * s, cw, 50 * s);
+        ctx.restore();
+
+        // Rolling green hills in foreground
         const hills = [
             { x: 80, y: 60, rx: 140, ry: 50, c: '#3e6e28' },
             { x: 350, y: 40, rx: 180, ry: 60, c: '#447228' },
@@ -6998,7 +7390,7 @@
                     ${person.name.charAt(0)}
                 </div>
                 <div>
-                    <div class="char-name">${person.name}</div>
+                    <div class="char-name">${person.name}<span class="seal-stamp">${isLearner ? '学' : '师'}</span></div>
                     <div class="char-role">${roleLabel}</div>
                 </div>
             </div>
@@ -9288,6 +9680,7 @@
             storytellingCooldownDay: storytelling.cooldownDay,
             eventLog: eventLog.slice(0, 50),
             vocabHistory: vocabHistory,
+            chengyuTriggered: [...chengyuTriggered],
         };
     }
 
@@ -9378,6 +9771,7 @@
         // Event log
         eventLog = data.eventLog || [];
         vocabHistory = data.vocabHistory || [];
+        chengyuTriggered = new Set(data.chengyuTriggered || []);
     }
 
     function deleteSave() {
@@ -9586,6 +9980,11 @@
             updateAtmospheric(dt);
             updateMicroEvents(dt);
 
+            // Check chengyu triggers (every ~100 ticks)
+            if (Math.floor(gameTick) % 100 === 0) { checkChengyuTriggers(); checkFestival(); }
+            if (chengyuOverlay && !chengyuOverlay.update(dt)) chengyuOverlay = null;
+            updateFestivalParticles(dt);
+
             // Update object tooltip
             updateObjectTooltip(dt);
 
@@ -9653,9 +10052,13 @@
         // Weather effects (on top of scene)
         drawWeatherEffects(ctx);
 
+        // Festival effects
+        drawFestivalEffects(ctx);
+
         // Calligraphy overlays (on top of weather/scene)
         for (const c of calligraphyOverlays) c.draw(ctx);
         if (proverbOverlay) proverbOverlay.draw(ctx);
+        if (chengyuOverlay) chengyuOverlay.draw(ctx);
 
         // Object tooltip (UI layer, always visible)
         drawObjectTooltip(ctx);
