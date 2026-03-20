@@ -2232,6 +2232,22 @@
         { id: 'secret',    hanzi: '秘密', pinyin: 'mìmì',      de: 'Geheimnis',   type: 'noun' },
         { id: 'meaning',   hanzi: '意思', pinyin: 'yìsi',      de: 'Bedeutung',   type: 'noun' },
         { id: 'habit',     hanzi: '习惯', pinyin: 'xíguàn',    de: 'Gewohnheit',  type: 'noun' },
+        // ── Expansion: Object-coverage vocab ──
+        { id: 'well2',     hanzi: '井',   pinyin: 'jǐng',      de: 'Brunnen',       type: 'noun' },
+        { id: 'wish',      hanzi: '愿',   pinyin: 'yuàn',      de: 'Wunsch',        type: 'noun' },
+        { id: 'god',       hanzi: '神',   pinyin: 'shén',      de: 'Gott',          type: 'noun' },
+        { id: 'incense',   hanzi: '香',   pinyin: 'xiāng',     de: 'Raeucherwerk',  type: 'noun' },
+        { id: 'bell',      hanzi: '钟',   pinyin: 'zhōng',     de: 'Glocke',        type: 'noun' },
+        { id: 'net',       hanzi: '网',   pinyin: 'wǎng',      de: 'Netz',          type: 'noun' },
+        { id: 'sail',      hanzi: '帆',   pinyin: 'fān',       de: 'Segel',         type: 'noun' },
+        { id: 'poem',      hanzi: '诗',   pinyin: 'shī',       de: 'Gedicht',       type: 'noun' },
+        { id: 'grain',     hanzi: '谷',   pinyin: 'gǔ',        de: 'Korn',          type: 'noun' },
+        { id: 'harvest',   hanzi: '收',   pinyin: 'shōu',      de: 'ernten',        type: 'verb' },
+        { id: 'hang',      hanzi: '挂',   pinyin: 'guà',       de: 'aufhaengen',    type: 'verb' },
+        { id: 'pray',      hanzi: '拜',   pinyin: 'bài',       de: 'beten',         type: 'verb' },
+        { id: 'float',     hanzi: '浮',   pinyin: 'fú',        de: 'schweben',      type: 'verb' },
+        { id: 'blow',      hanzi: '吹',   pinyin: 'chuī',      de: 'blasen',        type: 'verb' },
+        { id: 'wet',       hanzi: '湿',   pinyin: 'shī',       de: 'nass',          type: 'mod' },
     ];
 
     function buildVocab() {
@@ -2246,35 +2262,35 @@
     //  WORLD OBJECTS
     // ============================================================
     const OBJECT_DEFS = [
-        { id: 'house1',     type: 'house',      x: 180, y: 200, w: 80, h: 60, label: '房子' },
-        { id: 'house2',     type: 'house',      x: 600, y: 180, w: 80, h: 60, label: '房子' },
-        { id: 'teahouse1',  type: 'teahouse',   x: 400, y: 250, w: 90, h: 65, label: '茶馆' },
-        { id: 'market1',    type: 'market',      x: 300, y: 340, w: 70, h: 50, label: '市场' },
-        { id: 'well1',      type: 'well',        x: 480, y: 350, w: 35, h: 35, label: '井' },
-        { id: 'bridge1',    type: 'bridge',      x: 750, y: 400, w: 90, h: 50, label: '桥' },
-        { id: 'pagoda1',    type: 'pagoda',      x: 835, y: 140, w: 50, h: 80, label: '塔' },
-        { id: 'gate1',      type: 'gate',        x: 100, y: 300, w: 50, h: 60, label: '门' },
-        { id: 'bamboo1',    type: 'bamboo',      x: 60,  y: 200, w: 40, h: 70, label: '竹' },
-        { id: 'bamboo2',    type: 'bamboo',      x: 850, y: 450, w: 40, h: 70, label: '竹' },
-        { id: 'garden1',    type: 'garden',      x: 250, y: 450, w: 60, h: 45, label: '花园' },
-        { id: 'kitchen1',   type: 'kitchen',     x: 350, y: 180, w: 50, h: 40, label: '厨房' },
-        { id: 'workshop1',  type: 'workshop',    x: 500, y: 150, w: 55, h: 40, label: '书房' },
-        { id: 'fish_pond1', type: 'fish_pond',   x: 180, y: 520, w: 45, h: 35, label: '鱼塘' },
-        { id: 'shrine1',    type: 'shrine',      x: 150, y: 450, w: 40, h: 50, label: '神龛' },
-        { id: 'lantern1',   type: 'lantern_post',x: 440, y: 180, w: 15, h: 35, label: '灯' },
-        { id: 'rice1',      type: 'rice_paddy',  x: 560, y: 560, w: 60, h: 45, label: '稻田' },
-        { id: 'river1',     type: 'river',       x: 420, y: 560, w: 70, h: 50, label: '河' },
-        { id: 'dock1',      type: 'dock',        x: 720, y: 530, w: 40, h: 30, label: '码头' },
-        { id: 'lotus1',     type: 'lotus_pond',  x: 120, y: 530, w: 50, h: 35, label: '莲池' },
-        { id: 'flower1',    type: 'flower',      x: 200, y: 380, w: 30, h: 30, label: '花' },
-        { id: 'tree1',      type: 'willow',      x: 650, y: 350, w: 45, h: 65, label: '柳树' },
-        { id: 'tree2',      type: 'willow',      x: 130, y: 140, w: 45, h: 65, label: '柳树' },
+        { id: 'house1',     type: 'house',       x: 180, y: 200, w: 80, h: 60, label: '房子',   pinyin: 'fángzi' },
+        { id: 'house2',     type: 'house',       x: 600, y: 180, w: 80, h: 60, label: '房子',   pinyin: 'fángzi' },
+        { id: 'teahouse1',  type: 'teahouse',    x: 400, y: 250, w: 90, h: 65, label: '茶馆',   pinyin: 'cháguǎn' },
+        { id: 'market1',    type: 'market',       x: 300, y: 340, w: 70, h: 50, label: '市场',   pinyin: 'shìchǎng' },
+        { id: 'well1',      type: 'well',         x: 480, y: 350, w: 35, h: 35, label: '井',     pinyin: 'jǐng' },
+        { id: 'bridge1',    type: 'bridge',       x: 750, y: 400, w: 90, h: 50, label: '桥',     pinyin: 'qiáo' },
+        { id: 'pagoda1',    type: 'pagoda',       x: 835, y: 140, w: 50, h: 80, label: '塔',     pinyin: 'tǎ' },
+        { id: 'gate1',      type: 'gate',         x: 100, y: 300, w: 50, h: 60, label: '门',     pinyin: 'mén' },
+        { id: 'bamboo1',    type: 'bamboo',       x: 60,  y: 200, w: 40, h: 70, label: '竹',     pinyin: 'zhú' },
+        { id: 'bamboo2',    type: 'bamboo',       x: 850, y: 450, w: 40, h: 70, label: '竹',     pinyin: 'zhú' },
+        { id: 'garden1',    type: 'garden',        x: 250, y: 450, w: 60, h: 45, label: '花园',   pinyin: 'huāyuán' },
+        { id: 'kitchen1',   type: 'kitchen',      x: 350, y: 180, w: 50, h: 40, label: '厨房',   pinyin: 'chúfáng' },
+        { id: 'workshop1',  type: 'workshop',     x: 500, y: 150, w: 55, h: 40, label: '书房',   pinyin: 'shūfáng' },
+        { id: 'fish_pond1', type: 'fish_pond',    x: 180, y: 520, w: 45, h: 35, label: '鱼塘',   pinyin: 'yútáng' },
+        { id: 'shrine1',    type: 'shrine',       x: 150, y: 450, w: 40, h: 50, label: '神龛',   pinyin: 'shénkān' },
+        { id: 'lantern1',   type: 'lantern_post', x: 440, y: 180, w: 15, h: 35, label: '灯',     pinyin: 'dēng' },
+        { id: 'rice1',      type: 'rice_paddy',   x: 560, y: 560, w: 60, h: 45, label: '稻田',   pinyin: 'dàotián' },
+        { id: 'river1',     type: 'river',        x: 420, y: 560, w: 70, h: 50, label: '河',     pinyin: 'hé' },
+        { id: 'dock1',      type: 'dock',         x: 720, y: 530, w: 40, h: 30, label: '码头',   pinyin: 'mǎtou' },
+        { id: 'lotus1',     type: 'lotus_pond',   x: 120, y: 530, w: 50, h: 35, label: '莲池',   pinyin: 'liánchí' },
+        { id: 'flower1',    type: 'flower',       x: 200, y: 380, w: 30, h: 30, label: '花',     pinyin: 'huā' },
+        { id: 'tree1',      type: 'willow',       x: 650, y: 350, w: 45, h: 65, label: '柳树',   pinyin: 'liǔshù' },
+        { id: 'tree2',      type: 'willow',       x: 130, y: 140, w: 45, h: 65, label: '柳树',   pinyin: 'liǔshù' },
         // ── East bank (right of bridge) ──
-        { id: 'school1',      type: 'school',       x: 920, y: 220, w: 60, h: 50, label: '学堂' },
-        { id: 'medicine1',    type: 'medicine_hut', x: 840, y: 300, w: 55, h: 45, label: '药房' },
-        { id: 'stable1',      type: 'stable',       x: 920, y: 380, w: 50, h: 40, label: '马厩' },
-        { id: 'tea_terrace1', type: 'tea_terrace',  x: 920, y: 520, w: 50, h: 35, label: '晒茶台' },
-        { id: 'viewpoint1',   type: 'viewpoint',    x: 855, y: 590, w: 40, h: 35, label: '观景台' },
+        { id: 'school1',      type: 'school',       x: 920, y: 220, w: 60, h: 50, label: '学堂',   pinyin: 'xuétáng' },
+        { id: 'medicine1',    type: 'medicine_hut', x: 840, y: 300, w: 55, h: 45, label: '药房',   pinyin: 'yàofáng' },
+        { id: 'stable1',      type: 'stable',       x: 920, y: 380, w: 50, h: 40, label: '马厩',   pinyin: 'mǎjiù' },
+        { id: 'tea_terrace1', type: 'tea_terrace',  x: 920, y: 520, w: 50, h: 35, label: '晒茶台', pinyin: 'shàichátái' },
+        { id: 'viewpoint1',   type: 'viewpoint',    x: 855, y: 590, w: 40, h: 35, label: '观景台', pinyin: 'guānjǐngtái' },
     ];
 
     // ============================================================
@@ -3205,6 +3221,146 @@
             effects: {}, priority: 'social', requiresOther: true,
             activityDe: 'erklaert Gewohnheiten', visibleConcepts: ['habit','every','day','year','today','yesterday','already','still','also','really','joyful']
         },
+        // === EXPANSION: UNDERUTILIZED OBJECT ACTIONS ===
+        // lantern_post (was 0 actions)
+        {
+            id: 'light_lantern', target: 'lantern_post', duration: 100,
+            templates: [['me','make','fire'],['lantern','bright','night'],['fire','good','night']],
+            effects: {}, priority: 'productive',
+            activityDe: 'zuendet die Laterne an', visibleConcepts: ['lantern','fire','bright','night','hang','candle','dark','burn']
+        },
+        {
+            id: 'hang_lantern', target: 'lantern_post', duration: 140,
+            templates: [['me','hang','lantern'],['lantern','red','beautiful'],['hang','lantern','here']],
+            effects: {}, priority: 'productive',
+            activityDe: 'haengt eine Laterne auf', visibleConcepts: ['hang','lantern','red','beautiful','up','hand','night','new']
+        },
+        {
+            id: 'watch_lantern', target: 'lantern_post', duration: 100,
+            templates: [['look','lantern','beautiful'],['lantern','red','bright'],['night','lantern','good']],
+            effects: {}, priority: 'idle',
+            activityDe: 'bewundert die Laternen', visibleConcepts: ['look','lantern','red','bright','beautiful','night','warm','quiet','fire']
+        },
+        // shrine (was 1 action)
+        {
+            id: 'pray_shrine', target: 'shrine', duration: 200,
+            templates: [['me','pray','god'],['pray','quiet','good'],['wish','good','heart']],
+            effects: {}, priority: 'idle',
+            activityDe: 'betet am Schrein', visibleConcepts: ['pray','god','wish','quiet','heart','hope','candle','incense','good']
+        },
+        {
+            id: 'burn_incense', target: 'shrine', duration: 120,
+            templates: [['me','burn','incense'],['incense','fragrant','good'],['burn','incense','here']],
+            effects: {}, priority: 'productive',
+            activityDe: 'zuendet Raeucherstaebchen an', visibleConcepts: ['burn','incense','fragrant','fire','quiet','god','smell','hand']
+        },
+        // pagoda (was 1 action)
+        {
+            id: 'climb_pagoda', target: 'pagoda', duration: 250,
+            templates: [['me','climb','pagoda'],['pagoda','tall','beautiful'],['up','look','far']],
+            effects: {}, priority: 'idle',
+            activityDe: 'besteigt die Pagode', visibleConcepts: ['climb','pagoda','tall','up','far','look','foot','strength','beautiful','every']
+        },
+        {
+            id: 'ring_bell', target: 'pagoda', duration: 100,
+            templates: [['me','play','bell'],['bell','sound','big'],['listen','bell','good']],
+            effects: {}, priority: 'idle',
+            activityDe: 'laeutet die Tempelglocke', visibleConcepts: ['bell','sound','big','listen','quiet','old','beautiful','heart']
+        },
+        // fish_pond (was 1 action)
+        {
+            id: 'feed_fish', target: 'fish_pond', duration: 120,
+            templates: [['me','feed','fish'],['fish','eat','food'],['look','fish','water']],
+            effects: {}, priority: 'productive',
+            activityDe: 'fuettert die Fische', visibleConcepts: ['feed','fish','water','food','look','many','small','hand','rice']
+        },
+        {
+            id: 'watch_fish', target: 'fish_pond', duration: 140,
+            templates: [['look','fish','water'],['fish','beautiful','red'],['water','quiet','good']],
+            effects: {}, priority: 'idle',
+            activityDe: 'beobachtet die Fische', visibleConcepts: ['look','fish','water','red','beautiful','quiet','slow','many','deep']
+        },
+        // dock (was 1 action)
+        {
+            id: 'watch_river_dock', target: 'dock', duration: 120,
+            templates: [['look','river','far'],['water','go','far'],['boat','river','go']],
+            effects: {}, priority: 'idle',
+            activityDe: 'beobachtet den Fluss vom Steg', visibleConcepts: ['look','river','water','boat','far','shore','deep','quiet','wind','sail']
+        },
+        {
+            id: 'tie_boat', target: 'dock', duration: 100,
+            templates: [['me','make','rope'],['boat','here','good'],['rope','boat','hand']],
+            effects: {}, priority: 'productive',
+            activityDe: 'vertaeut das Boot', visibleConcepts: ['boat','rope','hand','shore','water','pull','near','strength']
+        },
+        // rice_paddy (was 1 action)
+        {
+            id: 'harvest_rice', target: 'rice_paddy', duration: 250,
+            templates: [['me','harvest','rice'],['rice','many','good'],['harvest','grain','field']],
+            effects: {}, priority: 'productive',
+            activityDe: 'erntet Reis', visibleConcepts: ['harvest','rice','grain','field','hand','many','knife','earth','foot','hot']
+        },
+        {
+            id: 'tend_rice', target: 'rice_paddy', duration: 180,
+            templates: [['me','look','rice'],['water','field','good'],['rice','green','new']],
+            effects: {}, priority: 'productive',
+            activityDe: 'pflegt das Reisfeld', visibleConcepts: ['look','rice','field','water','earth','green','insect','hand','foot','busy']
+        },
+        // willow (was 1 action)
+        {
+            id: 'read_under_willow', target: 'willow', duration: 200,
+            templates: [['me','read','book'],['tree','quiet','good'],['sit','read','here']],
+            effects: {}, priority: 'idle',
+            activityDe: 'liest unter dem Weidenbaum', visibleConcepts: ['read','book','tree','quiet','shadow','leaf','wind','sit','comfy']
+        },
+        {
+            id: 'write_poem_willow', target: 'willow', duration: 220,
+            templates: [['me','write','poem'],['tree','beautiful','quiet'],['poem','tree','wind']],
+            effects: {}, priority: 'productive',
+            activityDe: 'schreibt ein Gedicht', visibleConcepts: ['write','poem','tree','beautiful','wind','leaf','shadow','heart','think','quiet']
+        },
+        // well (was 2 actions)
+        {
+            id: 'wash_face_well', target: 'well', duration: 80,
+            templates: [['me','wash','water'],['water','cold','good'],['wash','hand','eye']],
+            effects: {}, priority: 'idle',
+            activityDe: 'waescht das Gesicht am Brunnen', visibleConcepts: ['wash','water','cold','hand','eye','morning','clean','well2','wet']
+        },
+        // bridge (was 2 actions)
+        {
+            id: 'listen_river_bridge', target: 'bridge', duration: 120,
+            templates: [['listen','water','sound'],['river','quiet','good'],['bridge','river','beautiful']],
+            effects: {}, priority: 'idle',
+            activityDe: 'lauscht dem Fluss von der Bruecke', visibleConcepts: ['listen','water','river','bridge','sound','quiet','deep','wind','comfy']
+        },
+        // bamboo (was 2 actions)
+        {
+            id: 'play_bamboo_flute', target: 'bamboo', duration: 180,
+            templates: [['me','play','music'],['bamboo','music','beautiful'],['blow','bamboo','sound']],
+            effects: {}, priority: 'idle',
+            activityDe: 'spielt Bambusfloete', visibleConcepts: ['play','music','bamboo','blow','sound','beautiful','wind','quiet','heart','song']
+        },
+        // river (was 2 actions)
+        {
+            id: 'skip_stones', target: 'river', duration: 100,
+            templates: [['me','play','stone'],['stone','water','far'],['play','river','good']],
+            effects: {}, priority: 'idle',
+            activityDe: 'laesst Steine springen', visibleConcepts: ['play','stone','water','river','hand','far','small','round','happy']
+        },
+        // flower (was 2 actions)
+        {
+            id: 'pick_flower', target: 'flower', duration: 80,
+            templates: [['me','pick','flower'],['flower','beautiful','red'],['give','flower','friend']],
+            effects: {}, priority: 'productive',
+            activityDe: 'pflueckt eine Blume', visibleConcepts: ['pick','flower','beautiful','red','hand','give','friend','fragrant','happy']
+        },
+        // lotus_pond (was 2 actions)
+        {
+            id: 'paint_lotus', target: 'lotus_pond', duration: 200,
+            templates: [['me','paint','lotus'],['lotus','beautiful','water'],['paint','picture','good']],
+            effects: {}, priority: 'productive',
+            activityDe: 'malt den Lotus', visibleConcepts: ['paint','lotus','beautiful','water','picture','quiet','float','red']
+        },
     ];
 
     // ============================================================
@@ -3247,6 +3403,12 @@
 
     // Object click tooltip
     let objectTooltip = null;
+
+    // Contextual object label glow
+    let activeObjectGlow = null;
+
+    // Vocab learning history for sparkline
+    let vocabHistory = [];
 
     // Quiz system
     let quizActive = false;
@@ -4298,6 +4460,7 @@
     function learnWord(learner, w) {
         learner.knownWords.add(w.conceptId);
         learner.wordHistory.push(w.conceptId);
+        vocabHistory.push({ day: gameDay, tick: gameTick });
         sfx('learn');
         learnFlashes.push(new LearnFlash(
             learner.x + randFloat(-10, 10), learner.y - 25,
@@ -5689,10 +5852,34 @@
 
         // Label — per-type visual bottom offset (distance from center to visual bottom in world coords)
         const visualBottom = VISUAL_BOTTOM[obj.type] || obj.h/2;
-        ctx.font = `${Math.round(9*canvasScale)}px 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif`;
-        ctx.fillStyle = 'rgba(200,190,160,0.6)';
+        const labelY = y + (visualBottom + 10) * canvasScale;
         ctx.textAlign = 'center';
-        ctx.fillText(obj.label, x, y + (visualBottom + 10) * canvasScale);
+
+        // Contextual glow when speaker acts here
+        if (activeObjectGlow && activeObjectGlow.objId === obj.id) {
+            const glowAlpha = Math.min(1, activeObjectGlow.timer / 30); // fade out in last 30 ticks
+            const pulseAlpha = glowAlpha * (0.7 + Math.sin(gameTick * 0.08) * 0.3);
+            // Glow halo
+            ctx.save();
+            ctx.font = `bold ${Math.round(12*canvasScale)}px 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif`;
+            ctx.fillStyle = `rgba(212,160,48,${pulseAlpha * 0.3})`;
+            ctx.fillText(obj.label, x, labelY);
+            ctx.fillText(obj.label, x + canvasScale * 0.5, labelY + canvasScale * 0.5);
+            // Sharp label
+            ctx.fillStyle = `rgba(255,220,120,${pulseAlpha})`;
+            ctx.fillText(obj.label, x, labelY);
+            // Pinyin below
+            if (obj.pinyin) {
+                ctx.font = `${Math.round(9*canvasScale)}px 'Courier New','Microsoft YaHei','PingFang SC','Noto Sans SC',monospace`;
+                ctx.fillStyle = `rgba(220,200,160,${pulseAlpha * 0.8})`;
+                ctx.fillText(obj.pinyin, x, labelY + 12 * canvasScale);
+            }
+            ctx.restore();
+        } else {
+            ctx.font = `${Math.round(9*canvasScale)}px 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif`;
+            ctx.fillStyle = 'rgba(200,190,160,0.6)';
+            ctx.fillText(obj.label, x, labelY);
+        }
     }
 
     function drawPerson(ctx, person) {
@@ -6587,6 +6774,12 @@
                     p.activityDe = p.currentAction.activityDe;
                     sfxForAction(p.currentAction.id);
                     speakerSpeak(p.currentAction);
+                    // Trigger contextual object label glow
+                    if (p.currentAction.target) {
+                        const glowObj = worldObjects.find(o => o.type === p.currentAction.target &&
+                            Math.sqrt((o.x - p.x) ** 2 + (o.y - p.y) ** 2) < 80);
+                        if (glowObj) activeObjectGlow = { objId: glowObj.id, timer: 180, maxTimer: 180 };
+                    }
                 }
                 break;
 
@@ -6856,6 +7049,46 @@
         document.getElementById('vocab-progress').textContent = `${known} / ${total} Wörter gelernt (${pct}%)`;
         document.getElementById('vocab-bar').style.width = pct + '%';
 
+        // Sparkline — words learned per game-day
+        let sparkCanvas = document.getElementById('vocab-sparkline');
+        if (!sparkCanvas) {
+            sparkCanvas = document.createElement('canvas');
+            sparkCanvas.id = 'vocab-sparkline';
+            sparkCanvas.width = 260;
+            sparkCanvas.height = 28;
+            sparkCanvas.style.cssText = 'width:100%;height:28px;margin:4px 0 2px;display:block;';
+            const barBg = document.querySelector('#vocab-panel .progress-bar-bg');
+            if (barBg) barBg.parentNode.insertBefore(sparkCanvas, barBg.nextSibling);
+        }
+        if (vocabHistory.length > 1) {
+            const sCtx = sparkCanvas.getContext('2d');
+            const sw = sparkCanvas.width, sh = sparkCanvas.height;
+            sCtx.clearRect(0, 0, sw, sh);
+            // Aggregate by game day
+            const dayCounts = {};
+            for (const h of vocabHistory) dayCounts[h.day] = (dayCounts[h.day] || 0) + 1;
+            const days = Object.keys(dayCounts).map(Number).sort((a, b) => a - b);
+            if (days.length >= 2) {
+                const maxC = Math.max(...days.map(d => dayCounts[d]), 1);
+                const pad = 4;
+                sCtx.strokeStyle = '#6a8a5a';
+                sCtx.lineWidth = 1.5;
+                sCtx.beginPath();
+                for (let i = 0; i < days.length; i++) {
+                    const px = pad + (i / (days.length - 1)) * (sw - pad * 2);
+                    const py = sh - pad - ((dayCounts[days[i]] / maxC) * (sh - pad * 2));
+                    if (i === 0) sCtx.moveTo(px, py); else sCtx.lineTo(px, py);
+                }
+                sCtx.stroke();
+                // Fill under curve
+                sCtx.lineTo(pad + (sw - pad * 2), sh - pad);
+                sCtx.lineTo(pad, sh - pad);
+                sCtx.closePath();
+                sCtx.fillStyle = 'rgba(106,138,90,0.15)';
+                sCtx.fill();
+            }
+        }
+
         const listEl = document.getElementById('vocab-list');
         let html = '';
         for (const cid of learner.wordHistory) {
@@ -7063,6 +7296,10 @@
             this.animPhase = randFloat(0, Math.PI * 2);
             this.facing = randFloat(0, Math.PI * 2);
             this.alive = true;
+            // Reaction state
+            this.reactAngle = this.facing;
+            this.reactTimer = 0;
+            this.approaching = false;
         }
 
         update(dt) {
@@ -7110,6 +7347,39 @@
                         this.targetX = Math.max(20, Math.min(WORLD_W - 20, this.x + randFloat(-100, 100)));
                         this.targetY = Math.max(20, Math.min(WORLD_H - 20, this.y + randFloat(-60, 60)));
                     }
+                }
+            }
+
+            // Ambient reactions (non-fleeing)
+            if (!this.fleeing) {
+                const speaker = persons[0], learner = persons[1];
+                const dSpeaker = Math.sqrt((this.x - speaker.x) ** 2 + (this.y - speaker.y) ** 2);
+                const dLearner = Math.sqrt((this.x - learner.x) ** 2 + (this.y - learner.y) ** 2);
+
+                if (this.type === 'crane' && dSpeaker < 120 && speechBubbles.length > 0) {
+                    // Crane turns head toward speaker
+                    const targetAngle = Math.atan2(speaker.y - this.y, speaker.x - this.x);
+                    this.reactAngle += (targetAngle - this.reactAngle) * 0.03 * dt;
+                    this.reactTimer = 60;
+                } else if (this.type === 'cat' && dLearner < 80 && learner.state !== 'moving') {
+                    // Cat approaches idle learner
+                    if (!this.approaching && Math.random() < 0.002 * dt) this.approaching = true;
+                    if (this.approaching && dLearner > 20) {
+                        this.targetX = learner.x + randFloat(-15, 15);
+                        this.targetY = learner.y + randFloat(-15, 15);
+                    }
+                    if (learner.state === 'moving') this.approaching = false;
+                } else if (this.type === 'magpie' && dSpeaker < 100 && speechBubbles.length > 0) {
+                    // Magpie flaps faster when speaker talks
+                    this.animPhase += dt * 0.08; // extra flap speed
+                }
+
+                // Decay reaction
+                if (this.reactTimer > 0) {
+                    this.reactTimer -= dt;
+                } else {
+                    this.reactAngle += (this.facing - this.reactAngle) * 0.02 * dt;
+                    this.approaching = false;
                 }
             }
 
@@ -7254,15 +7524,16 @@
                     ctx.beginPath();
                     ctx.ellipse(0, 0, 8*s, 5*s, 0, 0, Math.PI*2);
                     ctx.fill();
-                    // Long neck
+                    // Long neck — uses reactAngle for head turning
+                    const neckAngle = a.reactTimer > 0 ? a.reactAngle : a.facing;
                     ctx.strokeStyle = '#f0ece0';
                     ctx.lineWidth = 3*s;
                     ctx.beginPath();
                     ctx.moveTo(Math.cos(a.facing) * 6*s, -2*s);
-                    ctx.quadraticCurveTo(Math.cos(a.facing) * 10*s, -10*s, Math.cos(a.facing) * 8*s, -16*s);
+                    ctx.quadraticCurveTo(Math.cos(neckAngle) * 10*s, -10*s, Math.cos(neckAngle) * 8*s, -16*s);
                     ctx.stroke();
                     // Head
-                    const hx = Math.cos(a.facing) * 8*s;
+                    const hx = Math.cos(neckAngle) * 8*s;
                     ctx.beginPath();
                     ctx.arc(hx, -16*s, 3*s, 0, Math.PI*2);
                     ctx.fillStyle = '#f0ece0';
@@ -7454,12 +7725,17 @@
                     ctx.beginPath();
                     ctx.ellipse(catHx + 2*s, -2.5*s, 0.4*s, 0.7*s, 0, 0, Math.PI*2);
                     ctx.fill();
-                    // Tail (curved)
+                    // Tail (curved — raised when approaching learner)
                     ctx.strokeStyle = '#8a7050';
                     ctx.lineWidth = 1.5*s;
                     ctx.beginPath();
                     ctx.moveTo(-4*s, 0);
-                    ctx.quadraticCurveTo(-8*s, -6*s, -5*s + Math.sin(t * 2)*2*s, -8*s);
+                    if (a.approaching) {
+                        // Tail up, friendly posture
+                        ctx.quadraticCurveTo(-6*s, -10*s, -3*s, -12*s);
+                    } else {
+                        ctx.quadraticCurveTo(-8*s, -6*s, -5*s + Math.sin(t * 2)*2*s, -8*s);
+                    }
                     ctx.stroke();
                     break;
                 }
@@ -9011,6 +9287,7 @@
             weather: { currentWeather, weatherIntensity },
             storytellingCooldownDay: storytelling.cooldownDay,
             eventLog: eventLog.slice(0, 50),
+            vocabHistory: vocabHistory,
         };
     }
 
@@ -9100,6 +9377,7 @@
 
         // Event log
         eventLog = data.eventLog || [];
+        vocabHistory = data.vocabHistory || [];
     }
 
     function deleteSave() {
@@ -9310,6 +9588,12 @@
 
             // Update object tooltip
             updateObjectTooltip(dt);
+
+            // Update object label glow
+            if (activeObjectGlow) {
+                activeObjectGlow.timer -= dt;
+                if (activeObjectGlow.timer <= 0) activeObjectGlow = null;
+            }
         }
 
         // Update quiz (uses rawDt for real-time timers)
@@ -9324,7 +9608,7 @@
         // Y-sorted scene drawing — build draw list, sort by depth
         const drawList = [];
         for (const obj of worldObjects) {
-            const isGround = GROUND_TYPES.includes(obj.type);
+            const isGround = GROUND_TYPES.includes(obj.type) || obj.type === 'bridge';
             drawList.push({ sortY: isGround ? -1e6 : obj.y + (VISUAL_BOTTOM[obj.type] || obj.h / 2), type: 'obj', ref: obj });
         }
         for (const d of campDecorations) drawList.push({ sortY: d.y + 8, type: 'camp', ref: d });
