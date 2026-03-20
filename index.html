@@ -260,6 +260,26 @@
             border-radius: 2px;
             transition: width 0.5s;
         }
+        #vocab-search {
+            width: 100%;
+            padding: 5px 8px;
+            margin-bottom: 6px;
+            background: #0a0a08;
+            border: 1px solid #3a3020;
+            border-radius: 2px;
+            color: #d4c8a8;
+            font-family: 'Courier New', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', monospace;
+            font-size: 11px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        #vocab-search:focus {
+            border-color: #d4a030;
+        }
+        #vocab-search::placeholder {
+            color: #5a5a4a;
+            font-style: italic;
+        }
         .vocab-list {
             max-height: 200px;
             overflow-y: auto;
@@ -326,6 +346,57 @@
         .log-entry .log-time { color: #4a4a3a; margin-right: 6px; }
         .log-entry.learn { color: #6a8a5a; }
         .log-entry.speak { color: #a0a080; }
+        #command-bar {
+            background: linear-gradient(180deg, #12100a 0%, #1a1008 100%);
+            border-top: 1px solid #3a2a1a;
+            padding: 4px 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        #command-label {
+            color: #6a3020;
+            font-size: 13px;
+            font-family: 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif;
+            flex-shrink: 0;
+        }
+        #command-input {
+            flex: 1;
+            padding: 5px 8px;
+            background: #0a0a08;
+            border: 1px solid #3a3020;
+            border-radius: 2px;
+            color: #d4c8a8;
+            font-family: 'Courier New', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', monospace;
+            font-size: 12px;
+            outline: none;
+            min-width: 0;
+        }
+        #command-input:focus { border-color: #d4a030; }
+        #command-input::placeholder { color: #5a5a4a; font-style: italic; }
+        #command-send {
+            background: #2a2420;
+            border: 1px solid #4a3e30;
+            color: #d4a030;
+            min-width: 36px;
+            min-height: 32px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        #command-send:hover { background: #3a3226; }
+        #command-send:active { background: #4a3e30; }
+        #command-feedback {
+            color: #8a7e6a;
+            font-size: 10px;
+            padding: 2px 12px 2px;
+            background: #12100a;
+            display: none;
+            flex-shrink: 0;
+        }
+        #command-feedback.visible { display: block; }
     </style>
 </head>
 <body>
@@ -343,6 +414,11 @@
         </div>
     </div>
     <button id="panel-toggle" onclick="togglePanel()">i</button>
+    <div id="command-bar">
+        <span id="command-label">命令</span>
+        <input type="text" id="command-input" placeholder="Befehl eingeben (Pinyin/Hanzi)..." autocomplete="off">
+        <button id="command-send" onclick="submitCommand()">▶</button>
+    </div>
     <div id="main">
         <div id="canvas-wrap">
             <canvas id="gameCanvas"></canvas>
@@ -354,6 +430,7 @@
                 <h2>Vokabular<span class="seal-stamp">词</span></h2>
                 <div class="progress-text" id="vocab-progress">0 / 0 Wörter gelernt</div>
                 <div class="progress-bar-bg"><div class="progress-bar" id="vocab-bar" style="width:0%"></div></div>
+                <input type="text" id="vocab-search" placeholder="Suche (Pinyin / Deutsch)..." autocomplete="off">
                 <div class="vocab-list" id="vocab-list"></div>
             </div>
             <div class="panel-section">
@@ -2302,6 +2379,23 @@
         { id: 'welcome',   hanzi: '欢迎', pinyin: 'huānyíng',  de: 'willkommen',  type: 'mod' },
         { id: 'careful',   hanzi: '小心', pinyin: 'xiǎoxīn',   de: 'Vorsicht',    type: 'mod' },
         { id: 'goforit',   hanzi: '加油', pinyin: 'jiāyóu',    de: 'Los!',        type: 'mod' },
+        // ── Grammar Particles (structural) ──
+        { id: 'de_poss',   hanzi: '的', pinyin: 'de',  de: '(Besitz)',     type: 'particle' },
+        { id: 'le_perf',   hanzi: '了', pinyin: 'le',  de: '(abgeschl.)',  type: 'particle' },
+        { id: 'ma_q',      hanzi: '吗', pinyin: 'ma',  de: '(Frage)',      type: 'particle' },
+        { id: 'ne_q',      hanzi: '呢', pinyin: 'ne',  de: '(und du?)',    type: 'particle' },
+        { id: 'de_comp',   hanzi: '得', pinyin: 'de',  de: '(Grad)',       type: 'particle' },
+        { id: 'zhe_dur',   hanzi: '着', pinyin: 'zhe', de: '(andauernd)',  type: 'particle' },
+        { id: 'guo_exp',   hanzi: '过', pinyin: 'guo', de: '(Erfahrung)', type: 'particle' },
+        { id: 'zai_prog',  hanzi: '在', pinyin: 'zài', de: '(gerade)',    type: 'particle' },
+        { id: 'mei_neg',   hanzi: '没', pinyin: 'méi', de: '(nicht/kein)', type: 'particle' },
+        { id: 'ba_disp',   hanzi: '把', pinyin: 'bǎ',  de: '(Objekt-VZ)', type: 'particle' },
+        { id: 'a_mood',    hanzi: '啊', pinyin: 'a',   de: '(Ausruf)',    type: 'particle' },
+        { id: 'ba_sug',    hanzi: '吧', pinyin: 'ba',  de: '(Vorschlag)', type: 'particle' },
+        { id: 'la_mood',   hanzi: '啦', pinyin: 'la',  de: '(Freude)',    type: 'particle' },
+        { id: 'dou_all',   hanzi: '都', pinyin: 'dōu', de: '(alle)',      type: 'particle' },
+        { id: 'jiu_then',  hanzi: '就', pinyin: 'jiù', de: '(dann/gleich)', type: 'particle' },
+        { id: 'zai_again', hanzi: '再', pinyin: 'zài', de: '(nochmal)',   type: 'particle' },
         // ── Expansion: Grammar & Function Words (HSK 1-2) ──
         { id: 'and',       hanzi: '和',   pinyin: 'hé',        de: 'und',         type: 'mod' },
         { id: 'but',       hanzi: '但是', pinyin: 'dànshì',    de: 'aber',        type: 'mod' },
@@ -2447,7 +2541,7 @@
     // River runs roughly x=705..800 (meandering bezier), full height
     const RIVER_LEFT  = 705;
     const RIVER_RIGHT = 800;
-    const BRIDGE = { x: 750, y: 400, halfW: 45, halfH: 30 };
+    const BRIDGE = { x: 750, y: 400, halfW: 45, halfH: 50 };
 
     function isInRiver(x) {
         return x > RIVER_LEFT && x < RIVER_RIGHT;
@@ -2510,7 +2604,7 @@
     // Check if a position is blocked (river without bridge, or building)
     function isBlocked(x, y, targetType) {
         // River check (allow on bridge with generous corridor)
-        if (isInRiver(x) && Math.abs(y - BRIDGE.y) > BRIDGE.halfH + 15) {
+        if (isInRiver(x) && Math.abs(y - BRIDGE.y) > BRIDGE.halfH + 25) {
             return true;
         }
         // Building check
@@ -4130,6 +4224,9 @@
             // Relationships (name → score 0-100)
             this.relationships = {};
 
+            // Mood (computed periodically)
+            this.mood = null;
+
             // Waypoint navigation
             this.waypoints = [];
             this.stuckTimer = 0;
@@ -4262,6 +4359,392 @@
     }
 
     // ============================================================
+    //  GRAMMAR SYSTEM — role colors, tier, particle helpers
+    // ============================================================
+    const CJK_FONT_GRAMMAR = "'Microsoft YaHei','PingFang SC','Noto Sans SC','Noto Sans CJK SC',sans-serif";
+    const ROLE_COLORS = {
+        noun:     '#d4a030', // gold
+        verb:     '#5aaa5a', // green
+        mod:      '#6a9fd8', // blue
+        pronoun:  '#c8b888', // warm beige
+        particle: '#9a88bb', // muted lavender
+        unknown:  '#2a2010', // default dark
+    };
+    // Bubble-on-light colors (speaker bubble has light bg)
+    const ROLE_COLORS_LIGHT = {
+        noun:     '#9a6a00', // darker gold
+        verb:     '#2a7a2a', // darker green
+        mod:      '#3060a8', // darker blue
+        pronoun:  '#5a4a2a', // dark beige
+        particle: '#6050a0', // darker lavender
+        unknown:  '#2a2010',
+    };
+
+    function getGrammarTier() {
+        if (persons.length < 2) return 0;
+        const known = persons[1].knownWords.size;
+        const day = gameDay;
+        if (known < 15 || day <= 2) return 0;
+        if (known < 40 || day <= 5) return 1;
+        if (known < 80 || day <= 10) return 2;
+        if (known < 130 || day <= 20) return 3;
+        return 4;
+    }
+
+    function makeGrammarWord(id) {
+        const v = vocab[id];
+        if (!v) return { conceptId: id, hanzi: id, pinyin: id, de: '', type: 'particle', role: 'particle' };
+        return { conceptId: id, hanzi: v.hanzi, pinyin: v.pinyin, de: v.de, type: v.type, role: v.type };
+    }
+
+    // Measure words (量词) — noun → classifier mapping
+    const MEASURE_WORDS = {
+        // 个 gè — generic / people
+        _default: { hanzi: '个', pinyin: 'gè' },
+        friend: { hanzi: '个', pinyin: 'gè' }, person: { hanzi: '个', pinyin: 'gè' },
+        neighbor: { hanzi: '个', pinyin: 'gè' }, doctor: { hanzi: '个', pinyin: 'gè' },
+        student: { hanzi: '个', pinyin: 'gè' }, boy: { hanzi: '个', pinyin: 'gè' },
+        girl: { hanzi: '个', pinyin: 'gè' }, mother: { hanzi: '个', pinyin: 'gè' },
+        father: { hanzi: '个', pinyin: 'gè' }, brother: { hanzi: '个', pinyin: 'gè' },
+        sister: { hanzi: '个', pinyin: 'gè' }, son: { hanzi: '个', pinyin: 'gè' },
+        daughter: { hanzi: '个', pinyin: 'gè' }, apple: { hanzi: '个', pinyin: 'gè' },
+        gift: { hanzi: '个', pinyin: 'gè' }, dream: { hanzi: '个', pinyin: 'gè' },
+        question: { hanzi: '个', pinyin: 'gè' }, secret: { hanzi: '个', pinyin: 'gè' },
+        // 杯 bēi — cups / drinks
+        tea: { hanzi: '杯', pinyin: 'bēi' }, water: { hanzi: '杯', pinyin: 'bēi' },
+        wine: { hanzi: '杯', pinyin: 'bēi' }, milk: { hanzi: '杯', pinyin: 'bēi' },
+        soup: { hanzi: '碗', pinyin: 'wǎn' },
+        // 碗 wǎn — bowls
+        food: { hanzi: '碗', pinyin: 'wǎn' }, rice: { hanzi: '碗', pinyin: 'wǎn' },
+        noodle: { hanzi: '碗', pinyin: 'wǎn' },
+        // 本 běn — books
+        book: { hanzi: '本', pinyin: 'běn' },
+        // 支 zhī — pens/brushes
+        brush: { hanzi: '支', pinyin: 'zhī' }, candle: { hanzi: '支', pinyin: 'zhī' },
+        // 张 zhāng — flat things
+        paper: { hanzi: '张', pinyin: 'zhāng' }, picture: { hanzi: '张', pinyin: 'zhāng' },
+        table: { hanzi: '张', pinyin: 'zhāng' }, bed: { hanzi: '张', pinyin: 'zhāng' },
+        // 条 tiáo — long/thin things, rivers, fish, roads
+        river: { hanzi: '条', pinyin: 'tiáo' }, fish: { hanzi: '条', pinyin: 'tiáo' },
+        snake: { hanzi: '条', pinyin: 'tiáo' }, rope: { hanzi: '条', pinyin: 'tiáo' },
+        road: { hanzi: '条', pinyin: 'tiáo' },
+        // 棵 kē — trees/plants
+        bamboo: { hanzi: '棵', pinyin: 'kē' }, pine: { hanzi: '棵', pinyin: 'kē' },
+        tree: { hanzi: '棵', pinyin: 'kē' },
+        // 朵 duǒ — flowers, clouds
+        flower: { hanzi: '朵', pinyin: 'duǒ' }, cloud: { hanzi: '朵', pinyin: 'duǒ' },
+        // 只 zhī — animals (generic), one of a pair
+        bird: { hanzi: '只', pinyin: 'zhī' }, cat: { hanzi: '只', pinyin: 'zhī' },
+        chicken: { hanzi: '只', pinyin: 'zhī' }, rabbit: { hanzi: '只', pinyin: 'zhī' },
+        frog: { hanzi: '只', pinyin: 'zhī' }, butterfly: { hanzi: '只', pinyin: 'zhī' },
+        insect: { hanzi: '只', pinyin: 'zhī' }, sheep: { hanzi: '只', pinyin: 'zhī' },
+        // 匹 pǐ — horses
+        horse: { hanzi: '匹', pinyin: 'pǐ' },
+        // 头 tóu — cattle
+        cow: { hanzi: '头', pinyin: 'tóu' },
+        // 把 bǎ — handled things
+        chair: { hanzi: '把', pinyin: 'bǎ' }, broom: { hanzi: '把', pinyin: 'bǎ' },
+        // 座 zuò — mountains, buildings
+        mountain: { hanzi: '座', pinyin: 'zuò' }, bridge: { hanzi: '座', pinyin: 'zuò' },
+        house: { hanzi: '座', pinyin: 'zuò' },
+        // 件 jiàn — clothes, matters
+        clothes: { hanzi: '件', pinyin: 'jiàn' },
+        // 块 kuài — pieces, stones
+        stone: { hanzi: '块', pinyin: 'kuài' }, mooncake: { hanzi: '块', pinyin: 'kuài' },
+        // 颗 kē — small round things
+        star: { hanzi: '颗', pinyin: 'kē' },
+        // 双 shuāng — pairs
+        shoes: { hanzi: '双', pinyin: 'shuāng' },
+        // 顶 dǐng — hats
+        hat: { hanzi: '顶', pinyin: 'dǐng' },
+        // 首 shǒu — poems/songs
+        poem: { hanzi: '首', pinyin: 'shǒu' }, song: { hanzi: '首', pinyin: 'shǒu' },
+        // 盏 zhǎn — lanterns/lamps
+        lantern: { hanzi: '盏', pinyin: 'zhǎn' },
+    };
+
+    // Resultative complements — verb → possible complements
+    const RESULTATIVES = {
+        eat:   [{ hanzi: '完', pinyin: 'wán', de: 'aufgegessen' }, { hanzi: '饱', pinyin: 'bǎo', de: 'satt gegessen' }],
+        drink: [{ hanzi: '完', pinyin: 'wán', de: 'ausgetrunken' }],
+        cook:  [{ hanzi: '好', pinyin: 'hǎo', de: 'fertig gekocht' }],
+        make:  [{ hanzi: '好', pinyin: 'hǎo', de: 'fertig gemacht' }, { hanzi: '完', pinyin: 'wán', de: 'fertig' }],
+        write: [{ hanzi: '好', pinyin: 'hǎo', de: 'fertig geschrieben' }, { hanzi: '完', pinyin: 'wán', de: 'fertig' }],
+        learn: [{ hanzi: '会', pinyin: 'huì', de: 'gelernt/kann' }],
+        look:  [{ hanzi: '到', pinyin: 'dào', de: 'erblickt' }, { hanzi: '见', pinyin: 'jiàn', de: 'gesehen' }],
+        listen:[{ hanzi: '到', pinyin: 'dào', de: 'gehoert' }, { hanzi: '见', pinyin: 'jiàn', de: 'gehoert' }],
+        find:  [{ hanzi: '到', pinyin: 'dào', de: 'gefunden' }],
+        wash:  [{ hanzi: '干净', pinyin: 'gānjìng', de: 'sauber gewaschen' }],
+        repair:[{ hanzi: '好', pinyin: 'hǎo', de: 'repariert' }],
+        open:  [{ hanzi: '开', pinyin: 'kāi', de: 'geoeffnet' }],
+        paint: [{ hanzi: '好', pinyin: 'hǎo', de: 'fertig gemalt' }],
+    };
+
+    // Time-word IDs (should be placed sentence-initially in Chinese)
+    const TIME_WORD_IDS = new Set([
+        'now','today','tomorrow','yesterday','morning','night'
+    ]);
+
+    // Location mapping — action target → vocab concept for 在+place
+    const TARGET_LOCATION_MAP = {
+        kitchen: 'kitchen', teahouse: 'teahouse', workshop: 'workshop',
+        house: 'home', market: 'market', well: 'well2',
+        bridge: 'bridge', garden: 'garden', fish_pond: 'fish_pond',
+        shrine: 'shrine', stable: 'stable', river: 'river',
+    };
+
+    function applyGrammar(words, tier, action) {
+        if (tier <= 0 || words.length === 0) return words;
+        let result = words.map(w => ({ ...w }));
+        let majorApplied = false;
+
+        // --- Helper: re-scan types after mutations ---
+        function scan() {
+            return {
+                types: result.map(w => w.type),
+                ids: result.map(w => w.conceptId),
+                hasVerb: result.some(w => w.type === 'verb'),
+                hasMod: result.some(w => w.type === 'mod'),
+                hasNoun: result.some(w => w.type === 'noun'),
+                hasSubj: result[0] && result[0].type === 'pronoun',
+                vIdx: result.findIndex(w => w.type === 'verb'),
+                firstNounIdx: result.findIndex(w => w.type === 'noun'),
+            };
+        }
+
+        // =============================================
+        //  STRUCTURAL REORDERING (before particle insertion)
+        // =============================================
+
+        // Tier 1+: Move time words to sentence-initial position (Chinese rule)
+        if (tier >= 1) {
+            for (let i = 1; i < result.length; i++) {
+                if (TIME_WORD_IDS.has(result[i].conceptId)) {
+                    const tw = result.splice(i, 1)[0];
+                    result.splice(0, 0, tw);
+                    break; // only move one
+                }
+            }
+        }
+
+        // =============================================
+        //  TIER 1: Basic grammar
+        // =============================================
+        let s = scan();
+
+        // 很 before adjective predicates (no verb: 茶很好)
+        if (tier >= 1 && !s.hasVerb && s.hasMod && result.length >= 2) {
+            const adjIdx = result.findIndex((w, i) => i > 0 && w.type === 'mod');
+            if (adjIdx > 0 && Math.random() < 0.55) {
+                result.splice(adjIdx, 0, makeGrammarWord('very'));
+            }
+        }
+        // 也 before verb (我也喝茶)
+        if (tier >= 1 && s.hasVerb && s.vIdx > 0 && Math.random() < 0.13) {
+            result.splice(s.vIdx, 0, makeGrammarWord('also'));
+        }
+
+        // =============================================
+        //  TIER 2: Core particles
+        // =============================================
+        s = scan();
+
+        // 了 after verb (completed: 我吃了饭)
+        if (tier >= 2 && s.hasVerb && !majorApplied && Math.random() < 0.25) {
+            result.splice(s.vIdx + 1, 0, makeGrammarWord('le_perf'));
+            majorApplied = true;
+        }
+        // 的 possessive (pronoun + noun: 我的书)
+        if (tier >= 2 && s.hasSubj && s.types.length >= 2 && s.types[1] === 'noun' && Math.random() < 0.22) {
+            result.splice(1, 0, makeGrammarWord('de_poss'));
+        }
+        // 不 negation for present/future (不好, 不吃)
+        if (tier >= 2 && !majorApplied && Math.random() < 0.10) {
+            s = scan();
+            const tgt = result.findIndex((w, i) => i > 0 && (w.type === 'verb' || w.type === 'mod'));
+            if (tgt > 0) {
+                result.splice(tgt, 0, makeGrammarWord('no'));
+            }
+        }
+        // 没 negation for past (没吃, 没看到) — distinct from 不
+        if (tier >= 2 && s.hasVerb && !majorApplied && Math.random() < 0.08) {
+            s = scan();
+            if (s.vIdx > 0) {
+                result.splice(s.vIdx, 0, makeGrammarWord('mei_neg'));
+                majorApplied = true;
+            }
+        }
+
+        // =============================================
+        //  TIER 2+: Measure words (量词) — one 杯 tea, one 碗 rice
+        // =============================================
+        if (tier >= 2 && s.hasNoun) {
+            // Find a noun that has a measure word, insert 一+MW before it
+            const nIdx = result.findIndex(w => w.type === 'noun' && MEASURE_WORDS[w.conceptId]);
+            if (nIdx >= 0 && Math.random() < 0.25) {
+                const mw = MEASURE_WORDS[result[nIdx].conceptId];
+                const mwWord = { conceptId: '_mw', hanzi: '一' + mw.hanzi, pinyin: 'yī ' + mw.pinyin, de: '', type: 'particle', role: 'particle' };
+                result.splice(nIdx, 0, mwWord);
+            }
+        }
+
+        // =============================================
+        //  TIER 3: Complex structures
+        // =============================================
+        s = scan();
+
+        // 吗 yes/no question
+        if (tier >= 3 && !majorApplied && Math.random() < 0.12) {
+            result.push(makeGrammarWord('ma_q'));
+            majorApplied = true;
+        }
+        // 在...呢 progressive (我在喝茶呢)
+        if (tier >= 3 && s.hasVerb && !majorApplied && Math.random() < 0.15) {
+            s = scan();
+            result.splice(s.vIdx, 0, makeGrammarWord('zai_prog'));
+            result.push(makeGrammarWord('ne_q'));
+            majorApplied = true;
+        }
+        // V + 得 + Adj complement (做得好)
+        if (tier >= 3 && s.hasVerb && s.hasMod && !majorApplied && Math.random() < 0.13) {
+            s = scan();
+            const modIdx = result.findIndex((w, i) => i > s.vIdx && w.type === 'mod');
+            if (modIdx > s.vIdx) {
+                result.splice(modIdx, 0, makeGrammarWord('de_comp'));
+                majorApplied = true;
+            }
+        }
+        // Resultative complement (吃完, 做好, 看到)
+        if (tier >= 3 && s.hasVerb && !majorApplied && Math.random() < 0.18) {
+            s = scan();
+            const verbId = result[s.vIdx] ? result[s.vIdx].conceptId : null;
+            const rc = RESULTATIVES[verbId];
+            if (rc) {
+                const comp = randEl(rc);
+                const rcWord = { conceptId: '_rc', hanzi: comp.hanzi, pinyin: comp.pinyin, de: comp.de, type: 'particle', role: 'particle' };
+                result.splice(s.vIdx + 1, 0, rcWord);
+                majorApplied = true;
+            }
+        }
+        // 都 before verb for emphasis/totality (我们都喝茶)
+        if (tier >= 3 && s.hasVerb && s.vIdx > 0 && Math.random() < 0.10) {
+            s = scan();
+            // Only if subject is plural-ish (我们, 他们) or there's a 'many' concept
+            const subj = result[0] ? result[0].conceptId : '';
+            if (subj === 'we' || subj === 'they' || result.some(w => w.conceptId === 'many' || w.conceptId === 'every')) {
+                result.splice(s.vIdx, 0, makeGrammarWord('dou_all'));
+            }
+        }
+
+        // =============================================
+        //  TIER 3+: Location with 在 (在厨房做饭)
+        // =============================================
+        if (tier >= 3 && action && action.target && !majorApplied && Math.random() < 0.20) {
+            const locId = TARGET_LOCATION_MAP[action.target];
+            if (locId && vocab[locId]) {
+                s = scan();
+                if (s.hasVerb && s.vIdx >= 0) {
+                    const locWord = { conceptId: locId, hanzi: vocab[locId].hanzi, pinyin: vocab[locId].pinyin, de: vocab[locId].de, type: 'noun', role: 'noun' };
+                    const zaiWord = makeGrammarWord('zai_prog'); // 在 doubles as locative
+                    // Insert 在+place before verb
+                    result.splice(s.vIdx, 0, zaiWord, locWord);
+                }
+            }
+        }
+
+        // =============================================
+        //  TIER 4: Advanced structures
+        // =============================================
+        s = scan();
+
+        // 过 experience (我吃过这个)
+        if (tier >= 4 && s.hasVerb && !majorApplied && Math.random() < 0.10) {
+            result.splice(s.vIdx + 1, 0, makeGrammarWord('guo_exp'));
+            majorApplied = true;
+        }
+        // 把 disposal construction (我把饭吃了) — S 把 O V 了
+        if (tier >= 4 && s.hasVerb && s.hasNoun && !majorApplied && Math.random() < 0.10) {
+            s = scan();
+            // Need noun after verb (object) to move before verb
+            const objIdx = result.findIndex((w, i) => i > s.vIdx && w.type === 'noun');
+            if (objIdx > s.vIdx) {
+                const obj = result.splice(objIdx, 1)[0];
+                s = scan(); // rescan after splice
+                result.splice(s.vIdx, 0, makeGrammarWord('ba_disp'), obj);
+                // Add 了 at end
+                result.push(makeGrammarWord('le_perf'));
+                majorApplied = true;
+            }
+        }
+        // 就 (then/immediately: 我就去)
+        if (tier >= 4 && s.hasVerb && s.vIdx > 0 && !majorApplied && Math.random() < 0.10) {
+            s = scan();
+            result.splice(s.vIdx, 0, makeGrammarWord('jiu_then'));
+        }
+        // 因为...所以 causal
+        if (tier >= 4 && result.length >= 4 && !majorApplied && Math.random() < 0.08) {
+            result.splice(0, 0, makeGrammarWord('because'));
+            const midPoint = Math.min(3, result.length);
+            result.splice(midPoint, 0, makeGrammarWord('therefore'));
+            majorApplied = true;
+        }
+        // 如果...就 conditional
+        if (tier >= 4 && result.length >= 4 && !majorApplied && Math.random() < 0.08) {
+            result.splice(0, 0, makeGrammarWord('if'));
+            s = scan();
+            if (s.vIdx > 0) {
+                result.splice(s.vIdx, 0, makeGrammarWord('jiu_then'));
+            }
+            majorApplied = true;
+        }
+
+        // =============================================
+        //  SENTENCE-FINAL MOOD PARTICLES (all tiers 2+)
+        // =============================================
+        if (tier >= 2 && !majorApplied) {
+            const lastType = result.length > 0 ? result[result.length - 1].type : '';
+            // Don't stack mood particles after question particles
+            if (lastType !== 'particle') {
+                const r = Math.random();
+                if (r < 0.08) {
+                    result.push(makeGrammarWord('a_mood'));   // 啊 exclamation
+                } else if (r < 0.14) {
+                    result.push(makeGrammarWord('ba_sug'));   // 吧 suggestion
+                } else if (r < 0.18) {
+                    result.push(makeGrammarWord('la_mood'));  // 啦 joyful
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // Shared helper: draw color-coded hanzi characters
+    function _drawColorCodedHanzi(ctx, words, cx, cy, fontSize, lightBg) {
+        if (!words || words.length === 0) return;
+        const colors = lightBg ? ROLE_COLORS_LIGHT : ROLE_COLORS;
+        ctx.font = `bold ${fontSize}px ${CJK_FONT_GRAMMAR}`;
+        ctx.textBaseline = 'middle';
+        // Measure total width
+        let totalW = 0;
+        const segs = words.map(w => {
+            const hw = w.hanzi || '';
+            const width = ctx.measureText(hw).width;
+            totalW += width;
+            return { hanzi: hw, width, color: colors[w.type] || colors.unknown };
+        });
+        // Draw left-to-right
+        ctx.textAlign = 'left';
+        let drawX = cx - totalW / 2;
+        for (const seg of segs) {
+            ctx.fillStyle = seg.color;
+            ctx.fillText(seg.hanzi, drawX, cy);
+            drawX += seg.width;
+        }
+        ctx.textAlign = 'center'; // restore
+    }
+
+    // ============================================================
     //  SPEECH BUBBLE
     // ============================================================
     class SpeechBubble {
@@ -4342,11 +4825,15 @@
 
             ctx.textAlign = 'center';
             if (hasPinyin) {
-                // Hanzi line (top, larger)
-                ctx.font = `bold ${hanziFontSize}px ${CJK_FONT}`;
-                ctx.fillStyle = '#2a2010';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(this.hanziText, x, by + bh * 0.35);
+                // Color-coded hanzi line (top, larger)
+                if (this.conceptWords && this.conceptWords.length > 0) {
+                    _drawColorCodedHanzi(ctx, this.conceptWords, x, by + bh * 0.35, hanziFontSize, true);
+                } else {
+                    ctx.font = `bold ${hanziFontSize}px ${CJK_FONT}`;
+                    ctx.fillStyle = '#2a2010';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.hanziText, x, by + bh * 0.35);
+                }
                 // Pinyin line (bottom, smaller, grey)
                 ctx.font = `${pinyinFontSize}px 'Courier New',${CJK_FONT}`;
                 ctx.fillStyle = '#8a7e6a';
@@ -4421,11 +4908,11 @@
             this.maxLife = 300;
             this.revealProgress = 0;
             this.inkDrops = [];
-            // Position in world coords (top-right scroll area)
-            this.wx = WORLD_W - 175;
-            this.wy = 15;
+            // Position in world coords (flush right with small margin to panel)
             this.ww = 160;
             this.wh = 200;
+            this.wx = WORLD_W - this.ww - 5;
+            this.wy = 15;
             // Pre-render character to offscreen canvas
             this.offCanvas = document.createElement('canvas');
             this.offCanvas.width = 192;
@@ -4489,10 +4976,12 @@
             ctx.save();
             ctx.globalAlpha = alpha * 0.95;
 
-            const x = this.wx * s;
-            const y = this.wy * s;
+            // Use actual canvas width so overlay sits flush-right even on wide screens
+            const cw = canvas.width / dpr;
             const w = this.ww * s;
             const h = this.wh * s;
+            const x = cw - w - 10 * s;
+            const y = this.wy * s;
 
             // Parchment/rice paper background
             ctx.fillStyle = PARCHMENT_BG;
@@ -4674,21 +5163,23 @@
 
             ctx.save();
 
-            // Semi-transparent backdrop
+            // Semi-transparent backdrop (full canvas, not just world area)
+            const cw = canvas.width / dpr;
+            const ch = canvas.height / dpr;
             ctx.globalAlpha = alpha * 0.55;
             ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, WORLD_W * s, WORLD_H * s);
+            ctx.fillRect(0, 0, cw, ch);
 
             ctx.globalAlpha = alpha;
 
-            // Silk banner background
+            // Silk banner background (centered on full canvas)
             const charSize = 42 * s;
             const charGap = 6 * s;
             const totalCharsW = this.charCount * (charSize + charGap) - charGap;
-            const bannerW = Math.min(totalCharsW + 60 * s, (WORLD_W - 40) * s);
+            const bannerW = Math.min(totalCharsW + 60 * s, cw - 40 * s);
             const bannerH = 160 * s;
-            const bannerX = (WORLD_W * s - bannerW) / 2;
-            const bannerY = (WORLD_H * s - bannerH) / 2 - 20 * s;
+            const bannerX = (cw - bannerW) / 2;
+            const bannerY = (ch - bannerH) / 2 - 20 * s;
 
             // Banner fill
             ctx.fillStyle = PARCHMENT_BG;
@@ -4720,10 +5211,10 @@
             ctx.font = `${Math.round(7 * s)}px ${CJK_FONT}`;
             ctx.fillStyle = '#b8863a';
             ctx.textAlign = 'center';
-            ctx.fillText(`${this.milestone} Woerter gelernt`, WORLD_W * s / 2, bannerY + 18 * s);
+            ctx.fillText(`${this.milestone} Woerter gelernt`, cw / 2, bannerY + 18 * s);
 
             // Draw characters sequentially
-            const charsStartX = (WORLD_W * s - totalCharsW) / 2;
+            const charsStartX = (cw - totalCharsW) / 2;
             const charsY = bannerY + 32 * s;
 
             for (let i = 0; i < this.charCount; i++) {
@@ -4763,12 +5254,12 @@
                 ctx.font = `${Math.round(9 * s)}px ${CJK_FONT}`;
                 ctx.fillStyle = '#5a4530';
                 ctx.textAlign = 'center';
-                ctx.fillText(this.pinyin, WORLD_W * s / 2, bannerY + 88 * s);
+                ctx.fillText(this.pinyin, cw / 2, bannerY + 88 * s);
 
                 // German translation
                 ctx.font = `${Math.round(8 * s)}px ${CJK_FONT}`;
                 ctx.fillStyle = '#7a6a55';
-                ctx.fillText(this.german, WORLD_W * s / 2, bannerY + 104 * s);
+                ctx.fillText(this.german, cw / 2, bannerY + 104 * s);
 
                 // Decorative divider
                 ctx.beginPath();
@@ -4781,7 +5272,7 @@
                 // Source attribution
                 ctx.font = `italic ${Math.round(6.5 * s)}px ${CJK_FONT}`;
                 ctx.fillStyle = '#a09080';
-                ctx.fillText('— Chinesisches Sprichwort', WORLD_W * s / 2, bannerY + 132 * s);
+                ctx.fillText('— Chinesisches Sprichwort', cw / 2, bannerY + 132 * s);
             }
 
             ctx.restore();
@@ -4818,6 +5309,8 @@
 
     // --- Consolidated learn-word helper ---
     function learnWord(learner, w) {
+        // Grammar particles are structural, not learnable content
+        if (w.type === 'particle' || (vocab[w.conceptId] && vocab[w.conceptId].type === 'particle')) return;
         learner.knownWords.add(w.conceptId);
         learner.wordHistory.push(w.conceptId);
         vocabHistory.push({ day: gameDay, tick: gameTick });
@@ -6525,6 +7018,25 @@
             ctx.fill();
         }
 
+        // Mood indicator (small symbol above head)
+        if (!isSleeping && person.mood) {
+            const moodY = -32 * s;
+            const bobY = Math.sin(gameTick * 0.03) * 1.5 * s;
+            ctx.font = `${Math.round(10*s)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.globalAlpha = 0.7;
+            let sym = '';
+            switch (person.mood) {
+                case 'happy':    sym = '\u2665'; ctx.fillStyle = '#ff8888'; break; // ♥
+                case 'content':  sym = '\u266A'; ctx.fillStyle = '#aaddaa'; break; // ♪
+                case 'cold':     sym = '\u2744'; ctx.fillStyle = '#88ccff'; break; // ❄
+                case 'tired':    sym = '\u00B7\u00B7'; ctx.fillStyle = '#aaaacc'; break; // ··
+                case 'surprised':sym = '!';      ctx.fillStyle = '#ffdd66'; break;
+            }
+            if (sym) ctx.fillText(sym, 0, moodY + bobY);
+            ctx.globalAlpha = 1;
+        }
+
         ctx.restore();
 
         // Name label
@@ -6644,13 +7156,21 @@
             conceptId,
             hanzi: vocab[conceptId] ? vocab[conceptId].hanzi : conceptId,
             pinyin: vocab[conceptId] ? vocab[conceptId].pinyin : conceptId,
-            de: vocab[conceptId] ? vocab[conceptId].de : conceptId
+            de: vocab[conceptId] ? vocab[conceptId].de : conceptId,
+            type: vocab[conceptId] ? vocab[conceptId].type : 'unknown',
+            role: vocab[conceptId] ? vocab[conceptId].type : 'unknown'
         }));
-        const hanziText = words.map(w => w.hanzi).join('') + '!';
-        const pinyinText = words.map(w => w.pinyin).join(' ') + '!';
-        // Legacy: text field used by speech bubble display
+        // Apply grammar transforms based on progression tier
+        const tier = getGrammarTier();
+        const enhanced = applyGrammar(words, tier, action);
+        // Determine punctuation based on sentence-final particle
+        const lastId = enhanced.length > 0 ? enhanced[enhanced.length - 1].conceptId : '';
+        const punct = (lastId === 'ma_q' || lastId === 'ne_q') ? '?'
+                     : (lastId === 'a_mood' || lastId === 'la_mood' || lastId === 'ba_sug') ? '' : '!';
+        const hanziText = enhanced.map(w => w.hanzi).join('') + punct;
+        const pinyinText = enhanced.map(w => w.pinyin).join(' ') + punct;
         const text = hanziText;
-        return { words, text, hanziText, pinyinText };
+        return { words: enhanced, text, hanziText, pinyinText };
     }
 
     function speakerSpeak(action) {
@@ -6672,6 +7192,231 @@
         }
     }
 
+    // ============================================================
+    //  GERMAN GRAMMAR — build natural German from word list
+    // ============================================================
+    const DE_VERB_CONJ = {
+        // infinitive → { ich, du, er, wir, ihr, sie }
+        'essen':     { ich: 'esse',     du: 'isst',     er: 'isst',     wir: 'essen',    sie: 'essen' },
+        'trinken':   { ich: 'trinke',   du: 'trinkst',  er: 'trinkt',   wir: 'trinken',  sie: 'trinken' },
+        'geben':     { ich: 'gebe',     du: 'gibst',    er: 'gibt',     wir: 'geben',    sie: 'geben' },
+        'schlafen':  { ich: 'schlafe',  du: 'schlaefst',er: 'schlaeft', wir: 'schlafen', sie: 'schlafen' },
+        'kochen':    { ich: 'koche',    du: 'kochst',   er: 'kocht',    wir: 'kochen',   sie: 'kochen' },
+        'lernen':    { ich: 'lerne',    du: 'lernst',   er: 'lernt',    wir: 'lernen',   sie: 'lernen' },
+        'gehen':     { ich: 'gehe',     du: 'gehst',    er: 'geht',     wir: 'gehen',    sie: 'gehen' },
+        'kommen':    { ich: 'komme',    du: 'kommst',   er: 'kommt',    wir: 'kommen',   sie: 'kommen' },
+        'machen':    { ich: 'mache',    du: 'machst',   er: 'macht',    wir: 'machen',   sie: 'machen' },
+        'sehen':     { ich: 'sehe',     du: 'siehst',   er: 'sieht',   wir: 'sehen',    sie: 'sehen' },
+        'schreiben': { ich: 'schreibe', du: 'schreibst', er: 'schreibt', wir: 'schreiben', sie: 'schreiben' },
+        'malen':     { ich: 'male',     du: 'malst',    er: 'malt',     wir: 'malen',    sie: 'malen' },
+        'lesen':     { ich: 'lese',     du: 'liest',    er: 'liest',    wir: 'lesen',    sie: 'lesen' },
+        'kaufen':    { ich: 'kaufe',    du: 'kaufst',   er: 'kauft',    wir: 'kaufen',   sie: 'kaufen' },
+        'moegen':    { ich: 'mag',      du: 'magst',    er: 'mag',      wir: 'moegen',   sie: 'moegen' },
+        'wollen':    { ich: 'will',     du: 'willst',   er: 'will',     wir: 'wollen',   sie: 'wollen' },
+        'koennen':   { ich: 'kann',     du: 'kannst',   er: 'kann',     wir: 'koennen',  sie: 'koennen' },
+        'helfen':    { ich: 'helfe',    du: 'hilfst',   er: 'hilft',    wir: 'helfen',   sie: 'helfen' },
+        'finden':    { ich: 'finde',    du: 'findest',  er: 'findet',   wir: 'finden',   sie: 'finden' },
+        'wissen':    { ich: 'weiss',    du: 'weisst',   er: 'weiss',    wir: 'wissen',   sie: 'wissen' },
+        'haben':     { ich: 'habe',     du: 'hast',     er: 'hat',      wir: 'haben',    sie: 'haben' },
+        'stehen':    { ich: 'stehe',    du: 'stehst',   er: 'steht',    wir: 'stehen',   sie: 'stehen' },
+        'sitzen':    { ich: 'sitze',    du: 'sitzt',    er: 'sitzt',    wir: 'sitzen',   sie: 'sitzen' },
+        'hoeren':    { ich: 'hoere',    du: 'hoerst',   er: 'hoert',    wir: 'hoeren',   sie: 'hoeren' },
+        'lachen':    { ich: 'lache',    du: 'lachst',   er: 'lacht',    wir: 'lachen',   sie: 'lachen' },
+        'tanzen':    { ich: 'tanze',    du: 'tanzt',    er: 'tanzt',    wir: 'tanzen',   sie: 'tanzen' },
+        'lieben':    { ich: 'liebe',    du: 'liebst',   er: 'liebt',    wir: 'lieben',   sie: 'lieben' },
+        'fragen':    { ich: 'frage',    du: 'fragst',   er: 'fragt',    wir: 'fragen',   sie: 'fragen' },
+        'warten':    { ich: 'warte',    du: 'wartest',  er: 'wartet',   wir: 'warten',   sie: 'warten' },
+        'denken':    { ich: 'denke',    du: 'denkst',   er: 'denkt',    wir: 'denken',   sie: 'denken' },
+        'spielen':   { ich: 'spiele',   du: 'spielst',  er: 'spielt',   wir: 'spielen',  sie: 'spielen' },
+        'schneiden': { ich: 'schneide', du: 'schneidest',er:'schneidet',wir: 'schneiden', sie: 'schneiden' },
+        'rufen':     { ich: 'rufe',     du: 'rufst',    er: 'ruft',     wir: 'rufen',    sie: 'rufen' },
+        'oeffnen':   { ich: 'oeffne',   du: 'oeffnest', er: 'oeffnet',  wir: 'oeffnen',  sie: 'oeffnen' },
+        'pflanzen':  { ich: 'pflanze',  du: 'pflanzt',  er: 'pflanzt',  wir: 'pflanzen', sie: 'pflanzen' },
+        'benutzen':  { ich: 'benutze',  du: 'benutzt',  er: 'benutzt',  wir: 'benutzen', sie: 'benutzen' },
+    };
+
+    // Map pronoun concept → German conjugation key
+    const DE_PRONOUN_CONJ = {
+        'me': 'ich', 'you': 'du', 'he': 'er', 'she': 'er', 'we': 'wir', 'they': 'sie',
+    };
+
+    // Map pronoun concept → German subject form
+    const DE_PRONOUN_SUBJ = {
+        'me': 'Ich', 'you': 'Du', 'he': 'Er', 'she': 'Sie', 'we': 'Wir', 'they': 'Sie',
+    };
+
+    // Noun articles (simplified — all accusative for objects)
+    const DE_NOUN_ARTICLE = {
+        // Common nouns with articles: concept → [nom, akk]
+        'food': ['das','das'], 'tea': ['der','den'], 'water': ['das','das'],
+        'rice': ['der','den'], 'fish': ['der','den'], 'book': ['das','das'],
+        'brush': ['der','den'], 'ink': ['die','die'], 'paper': ['das','das'],
+        'picture': ['das','das'], 'mountain': ['der','den'], 'river': ['der','den'],
+        'bridge': ['die','die'], 'house': ['das','das'], 'home': ['das','das'],
+        'fire': ['das','das'], 'pot': ['der','den'], 'silk': ['die','die'],
+        'stone': ['der','den'], 'flower': ['die','die'], 'tree': ['der','den'],
+        'bird': ['der','den'], 'cat': ['die','die'], 'horse': ['das','das'],
+        'bed': ['das','das'], 'door': ['die','die'], 'garden': ['der','den'],
+        'wine': ['der','den'], 'soup': ['die','die'], 'moon': ['der','den'],
+        'star': ['der','den'], 'rain': ['der','den'], 'wind': ['der','den'],
+        'snow': ['der','den'], 'bamboo': ['der','den'], 'song': ['das','das'],
+    };
+
+    // Particle → German effect
+    const DE_PARTICLE_EFFECT = {
+        'le_perf': 'past',     // → past tense marker
+        'ma_q': 'question',    // → question mark
+        'ne_q': 'question',
+        'a_mood': 'exclaim',   // → !
+        'ba_sug': 'suggest',   // → "Lass uns..."
+        'la_mood': 'exclaim',
+        'zai_prog': 'prog',    // → "gerade"
+        'mei_neg': 'neg_past', // → "nicht" (past)
+        'guo_exp': 'exp',      // → "schon einmal"
+    };
+
+    function conjugateVerb(infinitive, pronoun) {
+        const key = pronoun || 'er';
+        // Try exact match
+        const conj = DE_VERB_CONJ[infinitive];
+        if (conj && conj[key]) return conj[key];
+        // Regular conjugation fallback
+        let stem = infinitive;
+        if (stem.endsWith('en')) stem = stem.slice(0, -2);
+        else if (stem.endsWith('n')) stem = stem.slice(0, -1);
+        switch (key) {
+            case 'ich': return stem + 'e';
+            case 'du': return stem + (stem.endsWith('t') || stem.endsWith('d') ? 'est' : 'st');
+            case 'er': return stem + (stem.endsWith('t') || stem.endsWith('d') ? 'et' : 't');
+            case 'wir': case 'sie': return infinitive;
+            default: return stem + 't';
+        }
+    }
+
+    function buildGermanResponse(words, learner) {
+        if (!words || words.length === 0) return { text: '...', anyKnown: false };
+
+        // Collect known content words and detect particles
+        const parts = [];
+        let subject = null, verb = null, objects = [], modifiers = [];
+        let effects = new Set();
+        let anyKnown = false;
+        let allKnown = true;
+
+        for (const w of words) {
+            if (w.type === 'particle') {
+                const eff = DE_PARTICLE_EFFECT[w.conceptId];
+                if (eff) effects.add(eff);
+                continue;
+            }
+            const known = learner.knownWords.has(w.conceptId);
+            if (!known) { allKnown = false; parts.push({ w, known: false }); continue; }
+            anyKnown = true;
+            parts.push({ w, known: true });
+
+            if (w.type === 'pronoun' && !subject) subject = w;
+            else if (w.type === 'verb' && !verb) verb = w;
+            else if (w.type === 'noun') objects.push(w);
+            else if (w.type === 'mod') modifiers.push(w);
+        }
+
+        if (!anyKnown) return { text: '...', anyKnown: false };
+
+        // Build German sentence
+        const tokens = [];
+        const conjKey = subject ? (DE_PRONOUN_CONJ[subject.conceptId] || 'er') : 'er';
+
+        // Suggestion pattern: 吧 → "Lass uns..."
+        if (effects.has('suggest') && verb) {
+            tokens.push('Lass uns');
+            tokens.push(verb.de); // infinitive
+            for (const o of objects) tokens.push(o.de);
+            for (const m of modifiers) tokens.push(m.de);
+        } else {
+            // Subject
+            if (subject) {
+                tokens.push(DE_PRONOUN_SUBJ[subject.conceptId] || subject.de);
+            }
+
+            // Progressive: "gerade"
+            if (effects.has('prog') && verb) tokens.push('gerade');
+
+            // Verb (conjugated)
+            if (verb) {
+                let verbForm;
+                if (effects.has('past') || effects.has('neg_past')) {
+                    // Simple past → "habe gegessen" is complex; use present for simplicity
+                    // but prepend "habe" for perfekt feel
+                    if (subject) {
+                        const haben = conjugateVerb('haben', conjKey);
+                        tokens.push(haben);
+                    }
+                    // Past participle approximation: ge + stem + t
+                    let pp = verb.de;
+                    if (DE_VERB_CONJ[verb.de]) {
+                        // Use a simple ge-...-t form
+                        let stem = verb.de;
+                        if (stem.endsWith('en')) stem = stem.slice(0, -2);
+                        else if (stem.endsWith('n')) stem = stem.slice(0, -1);
+                        pp = 'ge' + stem + 't';
+                        // Irregular: common overrides
+                        const ppMap = {
+                            'essen':'gegessen','trinken':'getrunken','schlafen':'geschlafen',
+                            'schreiben':'geschrieben','lesen':'gelesen','sehen':'gesehen',
+                            'finden':'gefunden','kommen':'gekommen','gehen':'gegangen',
+                            'helfen':'geholfen','geben':'gegeben','stehen':'gestanden',
+                            'sitzen':'gesessen',
+                        };
+                        if (ppMap[verb.de]) pp = ppMap[verb.de];
+                    }
+                    // Negation
+                    if (effects.has('neg_past')) tokens.push('nicht');
+                    // Objects before participle in German
+                    for (const o of objects) {
+                        const art = DE_NOUN_ARTICLE[o.conceptId];
+                        if (art) tokens.push(art[1]); // accusative
+                        tokens.push(o.de);
+                    }
+                    for (const m of modifiers) tokens.push(m.de);
+                    tokens.push(pp);
+                    objects = []; modifiers = []; // consumed
+                } else if (effects.has('exp')) {
+                    // Experience: "schon einmal gegessen"
+                    verbForm = conjugateVerb(verb.de, conjKey);
+                    tokens.push('schon einmal');
+                    tokens.push(verbForm);
+                } else {
+                    verbForm = conjugateVerb(verb.de, conjKey);
+                    tokens.push(verbForm);
+                }
+            }
+
+            // Remaining objects with articles
+            for (const o of objects) {
+                const art = DE_NOUN_ARTICLE[o.conceptId];
+                if (art) tokens.push(art[1]); // accusative
+                tokens.push(o.de);
+            }
+
+            // Modifiers
+            for (const m of modifiers) tokens.push(m.de);
+
+            // Unknown placeholders
+            for (const p of parts) {
+                if (!p.known && p.w.type !== 'particle') tokens.push('...');
+            }
+        }
+
+        let text = tokens.join(' ');
+        if (!text.trim() || text.trim() === '...') return { text: '...', anyKnown: false };
+
+        // Punctuation
+        if (effects.has('question')) text += '?';
+        else if (allKnown) text += '!';
+
+        return { text, anyKnown };
+    }
+
     function learnerRespond(sentence, action) {
         const learner = persons[1];
         const speaker = persons[0];
@@ -6685,28 +7430,11 @@
             }
         }
 
-        // Build response — learner repeats in German translation
+        // Build response — German translation with grammar
         setTimeout(() => {
-            let responseWords = [];
-            let allKnown = true;
-            let anyKnown = false;
-            for (const w of sentence.words) {
-                if (learner.knownWords.has(w.conceptId)) {
-                    responseWords.push(w.de.charAt(0).toUpperCase() + w.de.slice(1));
-                    anyKnown = true;
-                } else {
-                    responseWords.push('...');
-                    allKnown = false;
-                }
-            }
-
-            let responseText;
-            if (!anyKnown) {
-                responseText = '...';
-            } else {
-                responseText = responseWords.join(' ');
-                if (allKnown) responseText += '!';
-            }
+            const result = buildGermanResponse(sentence.words, learner);
+            const anyKnown = result.anyKnown;
+            const responseText = result.text;
 
             const bubble = new SpeechBubble(learner, responseText, [], true);
             speechBubbles.push(bubble);
@@ -6749,14 +7477,20 @@
             const actionDef = ACTION_DEFS.find(a => a.id === actionId);
             if (actionDef && actionDef.templates && actionDef.templates.length > 0) {
                 const template = randEl(actionDef.templates);
-                const words = template.map(conceptId => ({
+                const baseWords = template.map(conceptId => ({
                     conceptId,
                     hanzi: vocab[conceptId] ? vocab[conceptId].hanzi : conceptId,
                     pinyin: vocab[conceptId] ? vocab[conceptId].pinyin : conceptId,
-                    de: vocab[conceptId] ? vocab[conceptId].de : conceptId
+                    de: vocab[conceptId] ? vocab[conceptId].de : conceptId,
+                    type: vocab[conceptId] ? vocab[conceptId].type : 'unknown',
+                    role: vocab[conceptId] ? vocab[conceptId].type : 'unknown'
                 }));
-                const hanziText = words.map(w => w.hanzi).join('') + '。';
-                const pinyinText = words.map(w => w.pinyin).join(' ') + '.';
+                const words = applyGrammar(baseWords, getGrammarTier(), actionDef);
+                const lastId = words.length > 0 ? words[words.length - 1].conceptId : '';
+                const sPunct = (lastId === 'ma_q' || lastId === 'ne_q') ? '?'
+                             : (lastId === 'a_mood' || lastId === 'la_mood' || lastId === 'ba_sug') ? '' : '。';
+                const hanziText = words.map(w => w.hanzi).join('') + sPunct;
+                const pinyinText = words.map(w => w.pinyin).join(' ') + (sPunct === '?' ? '?' : '.');
                 storytelling.sentences.push({ text: hanziText, hanziText, pinyinText, words });
             }
         }
@@ -6837,13 +7571,8 @@
         setTimeout(() => {
             for (const idx of retellIdxs) {
                 const sentence = storytelling.sentences[idx];
-                const responseWords = sentence.words.map(w => {
-                    if (learner.knownWords.has(w.conceptId)) {
-                        return w.de.charAt(0).toUpperCase() + w.de.slice(1);
-                    }
-                    return '...';
-                });
-                const responseText = responseWords.join(' ');
+                const rr = buildGermanResponse(sentence.words, learner);
+                const responseText = rr.text;
                 if (responseText.replace(/\.\.\./g, '').trim().length > 0) {
                     speechBubbles.push(new SpeechBubble(learner, responseText, [], true));
                     sfx('respond');
@@ -6921,7 +7650,9 @@
             conceptId,
             hanzi: vocab[conceptId] ? vocab[conceptId].hanzi : conceptId,
             pinyin: vocab[conceptId] ? vocab[conceptId].pinyin : conceptId,
-            de: vocab[conceptId] ? vocab[conceptId].de : conceptId
+            de: vocab[conceptId] ? vocab[conceptId].de : conceptId,
+            type: vocab[conceptId] ? vocab[conceptId].type : 'unknown',
+            role: vocab[conceptId] ? vocab[conceptId].type : 'unknown'
         })).filter(w => vocab[w.conceptId]);
 
         if (words.length > 0) {
@@ -7327,7 +8058,10 @@
 
             case 'moving':
                 if (learner.moveToward(learner.targetX, learner.targetY, dt)) {
-                    if (learner.currentAction) {
+                    if (learner.currentAction && learner.currentAction._isCommand) {
+                        // Player-issued command: use dedicated handler
+                        handleLearnerCommandArrival(learner);
+                    } else if (learner.currentAction) {
                         learner.state = 'acting';
                         learner.actionTimer = learner.currentAction.duration / (0.5 + learner.geschick * 0.08);
                         learner.activityDe = learner.currentAction.activityDe;
@@ -7482,18 +8216,43 @@
         }
 
         const listEl = document.getElementById('vocab-list');
+        const searchEl = document.getElementById('vocab-search');
+        const query = (searchEl ? searchEl.value : '').toLowerCase().trim();
         let html = '';
         for (const cid of learner.wordHistory) {
             const v = vocab[cid];
-            if (v) {
-                html += `<div class="vocab-word" data-cid="${cid}" style="cursor:pointer;" title="Klicken für Kalligraphie"><span class="pseudo">${v.hanzi}</span><span class="pinyin">${v.pinyin}</span><span class="meaning">${v.de}</span></div>`;
+            if (!v) continue;
+            if (query) {
+                const matchPinyin = v.pinyin.toLowerCase().replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/g, c => {
+                    return 'āáǎà'.includes(c) ? 'a' : 'ēéěè'.includes(c) ? 'e' : 'īíǐì'.includes(c) ? 'i' : 'ōóǒò'.includes(c) ? 'o' : 'ūúǔù'.includes(c) ? 'u' : 'ǖǘǚǜ'.includes(c) ? 'v' : c;
+                }).includes(query) || v.pinyin.toLowerCase().includes(query);
+                const matchDe = v.de.toLowerCase().includes(query);
+                const matchHanzi = v.hanzi.includes(query);
+                if (!matchPinyin && !matchDe && !matchHanzi) continue;
             }
+            html += `<div class="vocab-word" data-cid="${cid}" style="cursor:pointer;" title="Klicken für Kalligraphie"><span class="pseudo">${v.hanzi}</span><span class="pinyin">${v.pinyin}</span><span class="meaning">${v.de}</span></div>`;
         }
         if (known === 0) {
             html = '<div style="color:#5a5a4a;font-style:italic;">Noch keine Woerter gelernt</div>';
+        } else if (query && !html) {
+            html = '<div style="color:#5a5a4a;font-style:italic;">Keine Treffer</div>';
         }
         listEl.innerHTML = html;
     }
+
+    // Search field: filter vocab list on input, prevent game keyboard shortcuts
+    document.getElementById('vocab-search').addEventListener('input', function() {
+        renderVocabPanel();
+    });
+    document.getElementById('vocab-search').addEventListener('keydown', function(e) {
+        e.stopPropagation(); // prevent space/1/2/3/m from triggering game controls
+    });
+
+    // Command input: Enter to submit, prevent game shortcuts while typing
+    document.getElementById('command-input').addEventListener('keydown', function(e) {
+        e.stopPropagation();
+        if (e.key === 'Enter') { submitCommand(); e.preventDefault(); }
+    });
 
     // Click on learned word in vocab panel → show calligraphy popup
     document.getElementById('vocab-list').addEventListener('click', function(e) {
@@ -7584,6 +8343,19 @@
             this.steerDx = 0;
             this.steerDy = 0;
             this.steerFrames = 0;
+
+            // Affinities — preferred routine locations
+            const affinityPool = ['kitchen','garden','market','teahouse','well','workshop','school','shrine','pagoda'];
+            const shuffled = affinityPool.slice().sort(() => Math.random() - 0.5);
+            this.affinities = shuffled.slice(0, randInt(2, 3));
+
+            // Watching (react to nearby events)
+            this.watchTarget = null;
+            this.watchTimer = 0;
+
+            // Mood
+            this.mood = null;
+            this.moodTimer = 0;
         }
 
         distTo(ox, oy) {
@@ -7674,6 +8446,19 @@
     // Water zone near the pond south of village
     const WATER_ZONE = { x: 420, y: 560, r: 40 };
 
+    // Land animals must avoid the river
+    const LAND_ANIMAL_TYPES = new Set(['rabbit', 'cat']);
+
+    function clampLandAnimal(x, y) {
+        // Push out of river zone (RIVER_LEFT..RIVER_RIGHT), except near bridge (wide tolerance)
+        if (x > RIVER_LEFT && x < RIVER_RIGHT) {
+            if (y > BRIDGE.y - BRIDGE.halfH - 30 && y < BRIDGE.y + BRIDGE.halfH + 30) return { x, y }; // bridge corridor OK
+            // Push to nearest bank
+            x = (x - RIVER_LEFT < RIVER_RIGHT - x) ? RIVER_LEFT - 5 : RIVER_RIGHT + 5;
+        }
+        return { x, y };
+    }
+
     class WildAnimal {
         constructor(type, x, y, speed, fleeRange) {
             this.type = type;
@@ -7716,12 +8501,16 @@
                 this.targetX = this.x + Math.cos(angle) * 80;
                 this.targetY = this.y + Math.sin(angle) * 80;
                 if (this.type === 'koi') {
-                    // Koi stay inside the pond
                     this.targetX = Math.max(WATER_ZONE.x - WATER_ZONE.r, Math.min(WATER_ZONE.x + WATER_ZONE.r, this.targetX));
                     this.targetY = Math.max(WATER_ZONE.y - WATER_ZONE.r * 0.6, Math.min(WATER_ZONE.y + WATER_ZONE.r * 0.6, this.targetY));
                 }
                 this.targetX = Math.max(10, Math.min(WORLD_W - 10, this.targetX));
                 this.targetY = Math.max(10, Math.min(WORLD_H - 10, this.targetY));
+                // Land animals: don't flee into the river
+                if (LAND_ANIMAL_TYPES.has(this.type)) {
+                    const c = clampLandAnimal(this.targetX, this.targetY);
+                    this.targetX = c.x; this.targetY = c.y;
+                }
             } else {
                 this.fleeing = false;
                 this.wanderTimer -= dt;
@@ -7738,6 +8527,11 @@
                     } else {
                         this.targetX = Math.max(20, Math.min(WORLD_W - 20, this.x + randFloat(-100, 100)));
                         this.targetY = Math.max(20, Math.min(WORLD_H - 20, this.y + randFloat(-60, 60)));
+                        // Land animals: avoid the river
+                        if (LAND_ANIMAL_TYPES.has(this.type)) {
+                            const c = clampLandAnimal(this.targetX, this.targetY);
+                            this.targetX = c.x; this.targetY = c.y;
+                        }
                     }
                 }
             }
@@ -7790,6 +8584,11 @@
             if (this.type === 'koi') {
                 this.x = Math.max(WATER_ZONE.x - WATER_ZONE.r, Math.min(WATER_ZONE.x + WATER_ZONE.r, this.x));
                 this.y = Math.max(WATER_ZONE.y - WATER_ZONE.r * 0.6, Math.min(WATER_ZONE.y + WATER_ZONE.r * 0.6, this.y));
+            }
+            // Land animals: hard clamp out of river every frame
+            if (LAND_ANIMAL_TYPES.has(this.type)) {
+                const c = clampLandAnimal(this.x, this.y);
+                this.x = c.x; this.y = c.y;
             }
 
             // Despawn if off screen
@@ -7866,7 +8665,7 @@
         const concepts = (conceptMap[animalType] || ['look']).filter(c => vocab[c]);
         if (concepts.length === 0) return;
         const chosen = concepts.slice(0, randInt(1, 2));
-        const words = chosen.map(c => ({ conceptId: c, hanzi: vocab[c].hanzi, pinyin: vocab[c].pinyin, de: vocab[c].de }));
+        const words = chosen.map(c => ({ conceptId: c, hanzi: vocab[c].hanzi, pinyin: vocab[c].pinyin, de: vocab[c].de, type: vocab[c].type, role: vocab[c].type }));
         const hanziText = words.map(w => w.hanzi).join('') + '!';
         const pinyinText = words.map(w => w.pinyin).join(' ') + '!';
         const anBubble = new SpeechBubble(persons[0], hanziText, words, false);
@@ -8177,26 +8976,170 @@
         }
     }
 
-    // NPC chatter — short "stone-age" phrases (uses the generated vocab)
-    function npcChatter() {
-        const concepts = Object.keys(vocab);
-        if (concepts.length === 0) return '...';
-        const len = randInt(1, 3);
-        const words = [];
-        for (let i = 0; i < len; i++) {
-            const c = randEl(concepts);
-            words.push(vocab[c].hanzi);
+    // NPC chatter — contextual phrases based on location, weather, time, relationship
+    function npcContextualChatter(npc, partner) {
+        if (Object.keys(vocab).length === 0) return '...';
+        const pool = [];
+
+        // Location context
+        for (const o of worldObjects) {
+            if (npc.distTo(o.x, o.y) > 80) continue;
+            if (o.type === 'kitchen')  { pool.push('food','hot','eat','rice','cook'); break; }
+            if (o.type === 'well')     { pool.push('water','cold','drink'); break; }
+            if (o.type === 'teahouse') { pool.push('tea','drink','good','sit'); break; }
+            if (o.type === 'garden')   { pool.push('flower','beautiful','green','look'); break; }
+            if (o.type === 'market')   { pool.push('buy','sell','many','money'); break; }
         }
-        const endings = ['！', '。', '？', '！！', '……'];
-        return words.join('') + randEl(endings);
+
+        // Weather
+        if (currentWeather === 'rain')  pool.push('rain','water','cold');
+        if (currentWeather === 'snow')  pool.push('snow','cold','beautiful','white');
+        if (currentWeather === 'wind')  pool.push('wind','cold','big');
+        if (currentWeather === 'clear') pool.push('sun','good','warm');
+
+        // Time of day
+        if (gameHour >= 5 && gameHour < 9)        pool.push('morning','good','eat');
+        else if (gameHour >= 11 && gameHour < 14)  pool.push('eat','food','hot');
+        else if (gameHour >= 18 && gameHour < 21)  pool.push('night','moon','quiet');
+        else if (gameHour >= 21 || gameHour < 5)   pool.push('sleep','night','tired');
+
+        // Relationship
+        if (partner) {
+            const rel = npc.relationships[partner.name] || 0;
+            if (rel >= 60) pool.push('friend','good','happy','we','together');
+            else if (rel >= 30) pool.push('good','you');
+        }
+
+        // Filter to existing vocab
+        const valid = pool.filter(w => vocab[w]);
+        if (valid.length >= 2) {
+            const len = randInt(1, 3);
+            const words = [];
+            for (let i = 0; i < len; i++) words.push(vocab[randEl(valid)].hanzi);
+            return words.join('') + randEl(['！','。','？','~','……']);
+        }
+        // Fallback — sensible generic phrases
+        return randEl(['好！','嗯。','是啊。','哈哈！','对！','不错！','真好。','走吧。']);
     }
+
+    // Get routine target based on time of day and NPC affinities
+    function getRoutineTarget(npc) {
+        let targetType;
+        if (gameHour >= 5 && gameHour < 11)       targetType = npc.affinities[0];
+        else if (gameHour >= 11 && gameHour < 17)  targetType = npc.affinities[1] || 'market';
+        else if (gameHour >= 17 && gameHour < 21)  targetType = 'teahouse';
+        else                                        targetType = 'house';
+        const obj = worldObjects.find(o => o.type === targetType);
+        if (!obj) return null;
+        return { x: obj.x + randFloat(-15, 15), y: obj.y + randFloat(-10, 10) };
+    }
+
+    // Mood calculation
+    function getMood(person) {
+        // Sleeping
+        if (person.state === 'acting' && person.currentAction &&
+            (person.currentAction.id === 'sleep_house' || person.currentAction.id === 'sleep_self')) return null;
+        // Night + low energy → tired
+        if ((gameHour >= 22 || gameHour < 5) && (!person.energy || person.energy < 30)) return 'tired';
+        // Cold weather
+        if ((currentWeather === 'snow' || currentWeather === 'wind') && getSeason() === 'winter') return 'cold';
+        // Chatting with high-rel partner → happy
+        if (person.state === 'chatting' && person.chatPartner) {
+            const rel = person.relationships[person.chatPartner.name] || 0;
+            if (rel >= 40) return 'happy';
+        }
+        // Near a friend → happy
+        const allChars = [...persons, ...npcs];
+        for (const c of allChars) {
+            if (c === person) continue;
+            if ((person.relationships[c.name] || 0) >= 60 && person.distTo(c.x, c.y) < 60) return 'happy';
+        }
+        // Near micro event → surprised
+        if (activeMicroEvent) {
+            const ev = activeMicroEvent;
+            const evX = ev.npc ? ev.npc.x : (ev.cat ? ev.cat.x : 0);
+            const evY = ev.npc ? ev.npc.y : (ev.cat ? ev.cat.y : 0);
+            if (person.distTo(evX, evY) < 80 && person !== ev.npc) return 'surprised';
+        }
+        // Default — content when weather is nice
+        if (currentWeather === 'clear' && gameHour >= 6 && gameHour < 20) return 'content';
+        return null;
+    }
+
+    // Alert nearby NPCs to look at an event
+    function alertNearbyNPCs(x, y, radius, duration) {
+        for (const npc of npcs) {
+            if (npc.distTo(x, y) < radius && npc.state !== 'chatting') {
+                npc.watchTarget = { x, y };
+                npc.watchTimer = duration;
+                npc.facing = Math.atan2(y - npc.y, x - npc.x);
+            }
+        }
+    }
+
+    // NPC reaction bubbles
+    const NPC_REACTIONS = ['哇！','好！','哈哈！','嗯？','看！','哦！','厉害！'];
+
+    // ── Multi-step NPC Interactions ──
+    const NPC_INTERACTION_DEFS = [
+        { id: 'share_tea', label: 'Tee teilen', minRel: 20, phases: [
+            { action: 'move_kitchen', duration: 80, chat: '去拿茶。' },
+            { action: 'move_partner', duration: 80, chat: '给你茶！' },
+            { action: 'drink_together', duration: 100, chat: null },
+        ]},
+        { id: 'walk_together', label: 'Spaziergang', minRel: 40, phases: [
+            { action: 'greet', duration: 40, chat: '一起走吧！' },
+            { action: 'walk_garden', duration: 120, chat: null },
+            { action: 'arrive', duration: 60, chat: '真好。' },
+        ]},
+        { id: 'show_item', label: 'Etwas zeigen', minRel: 10, phases: [
+            { action: 'find', duration: 60, chat: '看！' },
+            { action: 'show', duration: 80, chat: '这个好看！' },
+            { action: 'react', duration: 60, chat: null },
+        ]},
+        { id: 'quarrel_reconcile', label: 'Streit & Versöhnung', minRel: 30, phases: [
+            { action: 'argue', duration: 60, chat: '不对！' },
+            { action: 'walk_away', duration: 100, chat: '哼！' },
+            { action: 'return', duration: 80, chat: null },
+            { action: 'reconcile', duration: 60, chat: '对不起。' },
+        ]},
+    ];
+
+    let activeNpcInteraction = null;
+    let npcInteractionTimer = randFloat(500, 1000);
+
+    // Relationship change flash indicators
+    let relChangeFlashes = [];
 
     function updateNPCs(dt) {
         for (const npc of npcs) {
+            // Update watching timer
+            if (npc.watchTimer > 0) {
+                npc.watchTimer -= dt;
+                if (npc.watchTarget) npc.facing = Math.atan2(npc.watchTarget.y - npc.y, npc.watchTarget.x - npc.x);
+                if (npc.watchTimer <= 0) { npc.watchTarget = null; }
+            }
+
+            // Update mood periodically
+            if (Math.floor(gameTick) % 30 === 0) npc.mood = getMood(npc);
+
             switch (npc.state) {
                 case 'idle':
                     npc.idleTimer -= dt;
                     npc.activityDe = 'Untätig';
+
+                    // Glance toward high-rel character nearby (~0.1% per tick)
+                    if (Math.random() < 0.001 * dt) {
+                        const allChars = [...persons, ...npcs];
+                        for (const c of allChars) {
+                            if (c === npc) continue;
+                            if ((npc.relationships[c.name] || 0) >= 30 && npc.distTo(c.x, c.y) < 100) {
+                                npc.facing = Math.atan2(c.y - npc.y, c.x - npc.x);
+                                break;
+                            }
+                        }
+                    }
+
                     if (npc.idleTimer <= 0) {
                         // Decide: wander or try to chat
                         const chatChance = 0.35;
@@ -8234,21 +9177,36 @@
                                 npc.facing = Math.atan2(partner.y - npc.y, partner.x - npc.x);
                                 partner.facing = Math.atan2(npc.y - partner.y, npc.x - partner.x);
 
-                                // First bubble
-                                const text = npcChatter();
+                                // First bubble — contextual
+                                const text = npcContextualChatter(npc, partner);
                                 npcBubbles.push(new SpeechBubble(npc, text, [], false));
-                                // Boost relationship between chatting NPCs
-                                npc.relationships[partner.name] = Math.min(100, (npc.relationships[partner.name] || 0) + 3);
+                                // Boost relationship
+                                const oldRel = npc.relationships[partner.name] || 0;
+                                npc.relationships[partner.name] = Math.min(100, oldRel + 3);
                                 partner.relationships[npc.name] = Math.min(100, (partner.relationships[npc.name] || 0) + 3);
+                                if (oldRel < 97) relChangeFlashes.push({ x: (npc.x + partner.x)/2, y: Math.min(npc.y, partner.y) - 20, text: '+', timer: 60, color: 'rgba(120,220,120,' });
                                 startedChat = true;
                             }
                         }
 
                         if (!startedChat) {
-                            // Wander to a random nearby point
-                            npc.state = 'moving';
-                            setTargetWithPath(npc, Math.max(40, Math.min(WORLD_W - 40, npc.x + randFloat(-120, 120))), Math.max(40, Math.min(WORLD_H - 40, npc.y + randFloat(-120, 120))));
-                            npc.activityDe = 'Geht umher';
+                            // 40% chance: routine target, 60%: random wander
+                            if (Math.random() < 0.4 && npc.affinities) {
+                                const target = getRoutineTarget(npc);
+                                if (target) {
+                                    npc.state = 'moving';
+                                    setTargetWithPath(npc, Math.max(40, Math.min(WORLD_W - 40, target.x)), Math.max(40, Math.min(WORLD_H - 40, target.y)));
+                                    npc.activityDe = 'Geht zum Ziel';
+                                } else {
+                                    npc.state = 'moving';
+                                    setTargetWithPath(npc, Math.max(40, Math.min(WORLD_W - 40, npc.x + randFloat(-120, 120))), Math.max(40, Math.min(WORLD_H - 40, npc.y + randFloat(-120, 120))));
+                                    npc.activityDe = 'Geht umher';
+                                }
+                            } else {
+                                npc.state = 'moving';
+                                setTargetWithPath(npc, Math.max(40, Math.min(WORLD_W - 40, npc.x + randFloat(-120, 120))), Math.max(40, Math.min(WORLD_H - 40, npc.y + randFloat(-120, 120))));
+                                npc.activityDe = 'Geht umher';
+                            }
                         }
                     }
                     break;
@@ -8262,10 +9220,13 @@
 
                 case 'chatting':
                     npc.chatTimer -= dt;
-                    // Occasional new bubble while chatting
+                    // Alternating contextual bubbles while chatting
                     if (Math.random() < 0.003 * dt) {
-                        const text = npcChatter();
-                        npcBubbles.push(new SpeechBubble(npc, text, [], false));
+                        // Alternate: sometimes the partner responds instead
+                        const speaker = (npc.chatPartner && Math.random() < 0.5) ? npc.chatPartner : npc;
+                        const listener = speaker === npc ? npc.chatPartner : npc;
+                        const text = npcContextualChatter(speaker, listener);
+                        npcBubbles.push(new SpeechBubble(speaker, text, [], false));
                     }
                     if (npc.chatTimer <= 0) {
                         npc.state = 'idle';
@@ -8341,25 +9302,67 @@
 
     function drawRelationshipIndicators(ctx) {
         const allChars = [...persons, ...npcs];
+        const s = canvasScale;
         for (let i = 0; i < allChars.length; i++) {
             for (let j = i + 1; j < allChars.length; j++) {
                 const a = allChars[i], b = allChars[j];
                 const rel = Math.max(a.relationships[b.name] || 0, b.relationships[a.name] || 0);
-                if (rel < 60) continue;
+                if (rel < 50) continue;
                 const d = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-                if (d > 80) continue;
-                const alpha = Math.min(0.25, (rel - 60) / 160);
+                if (d > 100) continue;
+                const ax = a.x * s, ay = (a.y - 5) * s;
+                const bx = b.x * s, by = (b.y - 5) * s;
+
                 ctx.save();
-                ctx.strokeStyle = `rgba(255,220,120,${alpha})`;
-                ctx.lineWidth = canvasScale * 1.5;
-                ctx.setLineDash([3 * canvasScale, 4 * canvasScale]);
-                ctx.beginPath();
-                ctx.moveTo(a.x * canvasScale, (a.y - 5) * canvasScale);
-                ctx.lineTo(b.x * canvasScale, (b.y - 5) * canvasScale);
-                ctx.stroke();
+                if (rel >= 90) {
+                    // Tier 4: Golden pulsing line + sparkles
+                    const pulse = 0.3 + Math.sin(gameTick * 0.06) * 0.15;
+                    ctx.strokeStyle = `rgba(255,210,80,${pulse})`;
+                    ctx.lineWidth = s * 2.5;
+                    ctx.setLineDash([]);
+                    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+                    // Sparkle particles along line
+                    for (let t = 0.2; t <= 0.8; t += 0.3) {
+                        const sx = ax + (bx - ax) * t + Math.sin(gameTick * 0.1 + t * 20) * 4 * s;
+                        const sy = ay + (by - ay) * t + Math.cos(gameTick * 0.13 + t * 15) * 3 * s;
+                        ctx.beginPath();
+                        ctx.arc(sx, sy, 1.5 * s, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255,240,150,${pulse})`;
+                        ctx.fill();
+                    }
+                } else if (rel >= 70) {
+                    // Tier 3: Brighter golden line with subtle pulse
+                    const alpha = 0.2 + Math.sin(gameTick * 0.04) * 0.08;
+                    ctx.strokeStyle = `rgba(255,220,120,${alpha})`;
+                    ctx.lineWidth = s * 2;
+                    ctx.setLineDash([]);
+                    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+                } else {
+                    // Tier 2 (rel 50+): Faint dashed line
+                    const alpha = Math.min(0.18, (rel - 50) / 200);
+                    ctx.strokeStyle = `rgba(255,220,120,${alpha})`;
+                    ctx.lineWidth = s * 1.5;
+                    ctx.setLineDash([3 * s, 4 * s]);
+                    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+                }
                 ctx.setLineDash([]);
                 ctx.restore();
             }
+        }
+
+        // Draw relationship change flashes (+/-)
+        for (let i = relChangeFlashes.length - 1; i >= 0; i--) {
+            const f = relChangeFlashes[i];
+            f.timer -= 1;
+            const alpha = Math.min(1, f.timer / 30);
+            const rise = (60 - f.timer) * 0.3 * s;
+            ctx.save();
+            ctx.font = `bold ${Math.round(12*s)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = f.color + alpha + ')';
+            ctx.fillText(f.text, f.x * s, (f.y * s) - rise);
+            ctx.restore();
+            if (f.timer <= 0) relChangeFlashes.splice(i, 1);
         }
     }
 
@@ -8400,7 +9403,7 @@
             const validConcepts = weatherConcepts.filter(c => vocab[c]);
             if (validConcepts.length >= 1) {
                 const chosen = validConcepts.slice(0, randInt(1, 2));
-                const words = chosen.map(c => ({ conceptId: c, hanzi: vocab[c].hanzi, pinyin: vocab[c].pinyin, de: vocab[c].de }));
+                const words = chosen.map(c => ({ conceptId: c, hanzi: vocab[c].hanzi, pinyin: vocab[c].pinyin, de: vocab[c].de, type: vocab[c].type, role: vocab[c].type }));
                 const hanziText = words.map(w => w.hanzi).join('') + '!';
                 const pinyinText = words.map(w => w.pinyin).join(' ') + '!';
                 const wBubble = new SpeechBubble(persons[0], hanziText, words, false);
@@ -8999,6 +10002,7 @@
                 npcBubbles.push(new SpeechBubble(npc, '抓住它！', [], false));
                 // NPC runs around erratically
                 activeMicroEvent = { id: 'chicken_chase', npc, timer: 180, phase: 0 };
+                alertNearbyNPCs(npc.x, npc.y, 100, 80);
                 break;
             }
             case 'dropped_basket': {
@@ -9008,6 +10012,7 @@
                 npcBubbles.push(new SpeechBubble(npc, '哎呀！', [], false));
                 activeMicroEvent = { id: 'dropped_basket', npc, timer: 160,
                     itemX: npc.x + randFloat(-8, 8), itemY: npc.y + randFloat(5, 12), phase: 0 };
+                alertNearbyNPCs(npc.x, npc.y, 80, 60);
                 break;
             }
             case 'rare_stone': {
@@ -9016,11 +10021,13 @@
                 if (!npc) return;
                 npcBubbles.push(new SpeechBubble(npc, '看！好石头！', [], false));
                 activeMicroEvent = { id: 'rare_stone', npc, timer: 200, phase: 0 };
-                // Nearby NPCs turn toward finder
+                // Nearby NPCs turn toward finder and react
+                alertNearbyNPCs(npc.x, npc.y, 100, 100);
                 for (const other of npcs) {
                     if (other !== npc && Math.abs(other.x - npc.x) < 100 && Math.abs(other.y - npc.y) < 80) {
                         setTargetWithPath(other, npc.x + randFloat(-20, 20), npc.y + randFloat(-15, 15));
                         other.state = 'moving';
+                        if (Math.random() < 0.4) npcBubbles.push(new SpeechBubble(other, randEl(NPC_REACTIONS), [], false));
                     }
                 }
                 break;
@@ -9034,6 +10041,7 @@
                 setTargetWithPath(npc, well.x, well.y);
                 npc.state = 'moving';
                 activeMicroEvent = { id: 'splash_well', npc, well, timer: 200, phase: 0 };
+                alertNearbyNPCs(well.x, well.y, 90, 80);
                 break;
             }
             case 'cat_nap': {
@@ -9057,6 +10065,7 @@
                 setTargetWithPath(npc, pond.x + randFloat(-10, 10), pond.y + randFloat(-10, 10));
                 npc.state = 'moving';
                 activeMicroEvent = { id: 'big_fish', npc, pond, timer: 200, phase: 0 };
+                alertNearbyNPCs(pond.x, pond.y, 80, 70);
                 break;
             }
             case 'child_hide': {
@@ -9274,6 +10283,122 @@
                     ctx.restore();
                 }
                 break;
+            }
+        }
+    }
+
+    // ============================================================
+    //  MULTI-STEP NPC INTERACTIONS
+    // ============================================================
+    function triggerNpcInteraction() {
+        if (activeNpcInteraction) return;
+        const idle = npcs.filter(n => n.state === 'idle');
+        if (idle.length < 2) return;
+
+        const npc1 = randEl(idle);
+        // Pick partner weighted by relationship
+        const candidates = idle.filter(n => n !== npc1);
+        if (candidates.length === 0) return;
+        const npc2 = randEl(candidates);
+        const rel = npc1.relationships[npc2.name] || 0;
+
+        // Pick a valid interaction
+        const valid = NPC_INTERACTION_DEFS.filter(d => rel >= d.minRel);
+        if (valid.length === 0) return;
+        const def = randEl(valid);
+
+        activeNpcInteraction = {
+            id: def.id, npc1, npc2, def,
+            phaseIdx: 0, phaseTimer: def.phases[0].duration,
+            started: false
+        };
+    }
+
+    function updateNpcInteractions(dt) {
+        npcInteractionTimer -= dt;
+        if (npcInteractionTimer <= 0 && !activeNpcInteraction) {
+            triggerNpcInteraction();
+            npcInteractionTimer = randFloat(500, 1000);
+        }
+        if (!activeNpcInteraction) return;
+        const ia = activeNpcInteraction;
+        const phase = ia.def.phases[ia.phaseIdx];
+
+        // Init phase
+        if (!ia.started) {
+            ia.started = true;
+            ia.npc1.activityDe = ia.def.label;
+            ia.npc2.activityDe = ia.def.label;
+
+            if (phase.chat) {
+                npcBubbles.push(new SpeechBubble(ia.npc1, phase.chat, [], false));
+            }
+
+            switch (phase.action) {
+                case 'move_kitchen': {
+                    const kitchen = worldObjects.find(o => o.type === 'kitchen');
+                    if (kitchen) { setTargetWithPath(ia.npc1, kitchen.x + randFloat(-10,10), kitchen.y + randFloat(-5,5)); ia.npc1.state = 'moving'; }
+                    break;
+                }
+                case 'move_partner':
+                    setTargetWithPath(ia.npc1, ia.npc2.x + randFloat(-15,15), ia.npc2.y + randFloat(-10,10));
+                    ia.npc1.state = 'moving';
+                    break;
+                case 'greet':
+                    ia.npc1.facing = Math.atan2(ia.npc2.y - ia.npc1.y, ia.npc2.x - ia.npc1.x);
+                    ia.npc2.facing = Math.atan2(ia.npc1.y - ia.npc2.y, ia.npc1.x - ia.npc2.x);
+                    break;
+                case 'walk_garden': {
+                    const garden = worldObjects.find(o => o.type === 'garden');
+                    const tx = garden ? garden.x + randFloat(-20,20) : ia.npc1.x + randFloat(-80,80);
+                    const ty = garden ? garden.y + randFloat(-15,15) : ia.npc1.y + randFloat(-60,60);
+                    setTargetWithPath(ia.npc1, Math.max(40, Math.min(WORLD_W-40, tx)), Math.max(40, Math.min(WORLD_H-40, ty)));
+                    setTargetWithPath(ia.npc2, Math.max(40, Math.min(WORLD_W-40, tx + randFloat(-15,15))), Math.max(40, Math.min(WORLD_H-40, ty + randFloat(-10,10))));
+                    ia.npc1.state = 'moving'; ia.npc2.state = 'moving';
+                    break;
+                }
+                case 'find': case 'show':
+                    ia.npc1.facing = Math.atan2(ia.npc2.y - ia.npc1.y, ia.npc2.x - ia.npc1.x);
+                    break;
+                case 'argue':
+                    ia.npc1.facing = Math.atan2(ia.npc2.y - ia.npc1.y, ia.npc2.x - ia.npc1.x);
+                    ia.npc2.facing = Math.atan2(ia.npc1.y - ia.npc2.y, ia.npc1.x - ia.npc2.x);
+                    break;
+                case 'walk_away':
+                    setTargetWithPath(ia.npc1, Math.max(40, Math.min(WORLD_W-40, ia.npc1.x + randFloat(-80,80))), Math.max(40, Math.min(WORLD_H-40, ia.npc1.y + randFloat(-60,60))));
+                    ia.npc1.state = 'moving';
+                    break;
+                case 'return':
+                    setTargetWithPath(ia.npc1, ia.npc2.x + randFloat(-15,15), ia.npc2.y + randFloat(-10,10));
+                    ia.npc1.state = 'moving';
+                    break;
+                case 'reconcile':
+                    ia.npc1.facing = Math.atan2(ia.npc2.y - ia.npc1.y, ia.npc2.x - ia.npc1.x);
+                    ia.npc2.facing = Math.atan2(ia.npc1.y - ia.npc2.y, ia.npc1.x - ia.npc2.x);
+                    npcBubbles.push(new SpeechBubble(ia.npc2, '没关系。', [], false));
+                    break;
+                case 'drink_together': case 'arrive': case 'react':
+                    if (phase.chat) npcBubbles.push(new SpeechBubble(ia.npc2, npcContextualChatter(ia.npc2, ia.npc1), [], false));
+                    break;
+            }
+        }
+
+        ia.phaseTimer -= dt;
+        if (ia.phaseTimer <= 0) {
+            ia.phaseIdx++;
+            if (ia.phaseIdx >= ia.def.phases.length) {
+                // Interaction complete — boost relationship
+                const oldRel = ia.npc1.relationships[ia.npc2.name] || 0;
+                ia.npc1.relationships[ia.npc2.name] = Math.min(100, oldRel + 5);
+                ia.npc2.relationships[ia.npc1.name] = Math.min(100, (ia.npc2.relationships[ia.npc1.name] || 0) + 5);
+                relChangeFlashes.push({ x: (ia.npc1.x + ia.npc2.x)/2, y: Math.min(ia.npc1.y, ia.npc2.y) - 20, text: '+', timer: 60, color: 'rgba(120,220,120,' });
+                ia.npc1.state = 'idle'; ia.npc1.idleTimer = randFloat(60, 200);
+                ia.npc2.state = 'idle'; ia.npc2.idleTimer = randFloat(60, 200);
+                ia.npc1.activityDe = 'Untätig'; ia.npc2.activityDe = 'Untätig';
+                activeNpcInteraction = null;
+            } else {
+                ia.phaseTimer = ia.def.phases[ia.phaseIdx].duration;
+                ia.started = false; // trigger next phase init
             }
         }
     }
@@ -9645,6 +10770,194 @@
     }
 
     // ============================================================
+    //  COMMAND SYSTEM — player gives orders to the learner
+    // ============================================================
+    let commandFeedbackTimer = 0;
+
+    // Strip tone marks for fuzzy pinyin matching
+    function stripTones(str) {
+        return str.toLowerCase().replace(/[āáǎà]/g,'a').replace(/[ēéěè]/g,'e')
+            .replace(/[īíǐì]/g,'i').replace(/[ōóǒò]/g,'o')
+            .replace(/[ūúǔù]/g,'u').replace(/[ǖǘǚǜ]/g,'v');
+    }
+
+    // Parse input into matching vocab concept IDs
+    function parseCommandInput(input) {
+        const learner = persons[1];
+        const raw = input.trim();
+        if (!raw) return [];
+        const lower = raw.toLowerCase();
+        const stripped = stripTones(raw);
+
+        const matched = [];
+        // Try matching each known word against input
+        for (const cid of learner.knownWords) {
+            const v = vocab[cid];
+            if (!v || v.type === 'particle') continue;
+            // Match by hanzi substring
+            if (raw.includes(v.hanzi)) { matched.push({ cid, score: 3 }); continue; }
+            // Match by pinyin (with and without tones)
+            const vPinyin = v.pinyin.toLowerCase();
+            const vStripped = stripTones(v.pinyin);
+            if (lower.includes(vPinyin) || stripped.includes(vStripped)) { matched.push({ cid, score: 2 }); continue; }
+            // Match by German
+            if (lower.includes(v.de.toLowerCase())) { matched.push({ cid, score: 1 }); continue; }
+        }
+        // Sort by score (best matches first), deduplicate
+        matched.sort((a, b) => b.score - a.score);
+        const seen = new Set();
+        return matched.filter(m => { if (seen.has(m.cid)) return false; seen.add(m.cid); return true; }).map(m => m.cid);
+    }
+
+    // Find the best ACTION_DEFS match for a set of concept IDs
+    function findActionForConcepts(conceptIds) {
+        if (conceptIds.length === 0) return null;
+        const cidSet = new Set(conceptIds);
+        let bestAction = null, bestScore = 0;
+
+        for (const action of ACTION_DEFS) {
+            // Skip need-only actions (sleep, urgent eat/drink)
+            if (action.priority === 'need' && !action.id.includes('eat') && !action.id.includes('drink')) continue;
+
+            // Score by how many template words or visibleConcepts overlap
+            let score = 0;
+            if (action.templates) {
+                for (const tmpl of action.templates) {
+                    let tmplScore = 0;
+                    for (const cid of tmpl) { if (cidSet.has(cid)) tmplScore++; }
+                    score = Math.max(score, tmplScore);
+                }
+            }
+            if (action.visibleConcepts) {
+                let visScore = 0;
+                for (const cid of action.visibleConcepts) { if (cidSet.has(cid)) visScore++; }
+                score = Math.max(score, visScore * 0.5); // visibleConcepts are weaker matches
+            }
+            if (score > bestScore) { bestScore = score; bestAction = action; }
+        }
+        return bestScore >= 1 ? bestAction : null;
+    }
+
+    function submitCommand() {
+        const inputEl = document.getElementById('command-input');
+        const raw = inputEl.value.trim();
+        if (!raw || persons.length < 2) return;
+
+        const learner = persons[1];
+
+        // Check learner has learned words
+        if (learner.knownWords.size < 3) {
+            showCommandFeedback('Noch zu wenige Wörter gelernt...');
+            return;
+        }
+
+        // Parse input
+        const conceptIds = parseCommandInput(raw);
+        if (conceptIds.length === 0) {
+            showCommandFeedback('Nicht verstanden — nur gelernte Wörter verwenden!');
+            return;
+        }
+
+        // Find matching action
+        const action = findActionForConcepts(conceptIds);
+        if (!action) {
+            // Show what was understood but no action found
+            const understood = conceptIds.slice(0, 3).map(c => vocab[c] ? vocab[c].hanzi : c).join('');
+            showCommandFeedback(`Verstanden: "${understood}" — aber was soll ich tun?`);
+            // Learner shows confused response
+            const confBubble = new SpeechBubble(learner, '...?', [], true);
+            speechBubbles.push(confBubble);
+            return;
+        }
+
+        // Execute: force learner to do this action
+        learner.state = 'moving';
+        learner.followMode = 'returning';
+        learner.currentAction = { ...action, _isCommand: true };
+        learner.activityDe = action.activityDe;
+
+        // Find target location
+        let tx, ty;
+        if (action.target) {
+            const obj = findClosestObjectFrom(learner, action.target);
+            if (obj) {
+                tx = obj.x + randFloat(-10, 10);
+                ty = obj.y + randFloat(-10, 10);
+            } else {
+                tx = learner.x; ty = learner.y;
+            }
+        } else {
+            tx = learner.x + randFloat(-20, 20);
+            ty = learner.y + randFloat(-15, 15);
+        }
+        tx = Math.max(30, Math.min(WORLD_W - 30, tx));
+        ty = Math.max(30, Math.min(WORLD_H - 30, ty));
+        setTargetWithPath(learner, tx, ty);
+
+        // Learner acknowledges — build German sentence from the matched action
+        const ackSentence = buildSentence(action);
+        const ackResult = buildGermanResponse(ackSentence.words, learner);
+        const responseText = ackResult.anyKnown ? ackResult.text : 'Ja!';
+        setTimeout(() => {
+            const ackBubble = new SpeechBubble(learner, responseText, [], true);
+            speechBubbles.push(ackBubble);
+            sfx('respond');
+            addLog(`${learner.name} fuehrt Befehl aus: ${action.activityDe}`, 'learn');
+        }, 300);
+
+        // Show feedback
+        const cmdHanzi = conceptIds.slice(0, 4).map(c => vocab[c] ? vocab[c].hanzi : '').join('');
+        showCommandFeedback(`→ ${cmdHanzi} → ${action.activityDe}`);
+        inputEl.value = '';
+    }
+
+    function showCommandFeedback(text) {
+        let fb = document.getElementById('command-feedback');
+        if (!fb) {
+            fb = document.createElement('div');
+            fb.id = 'command-feedback';
+            const cmdBar = document.getElementById('command-bar');
+            cmdBar.parentNode.insertBefore(fb, cmdBar.nextSibling);
+        }
+        fb.textContent = text;
+        fb.classList.add('visible');
+        commandFeedbackTimer = 4000;
+    }
+
+    // Handle learner arriving at command target
+    function handleLearnerCommandArrival(learner) {
+        if (!learner.currentAction || !learner.currentAction._isCommand) return false;
+        const action = learner.currentAction;
+
+        // Apply effects
+        if (action.effects) {
+            if (action.effects.hunger) learner.hunger = Math.min(100, learner.hunger + action.effects.hunger);
+            if (action.effects.thirst) learner.thirst = Math.min(100, learner.thirst + action.effects.thirst);
+            if (action.effects.energy) learner.energy = Math.min(100, learner.energy + action.effects.energy);
+        }
+
+        // Show action speech bubble (using the action's template, with grammar)
+        const sentence = buildSentence(action);
+        const actBubble = new SpeechBubble(learner, sentence.hanziText, sentence.words, true);
+        speechBubbles.push(actBubble);
+        sfxForAction(action.id);
+
+        // Enter acting state briefly
+        learner.state = 'acting';
+        learner.actionTimer = Math.min(action.duration || 120, 180);
+        learner.activityDe = action.activityDe;
+
+        // Glow target object
+        if (action.target) {
+            const glowObj = worldObjects.find(o => o.type === action.target &&
+                Math.sqrt((o.x - learner.x) ** 2 + (o.y - learner.y) ** 2) < 80);
+            if (glowObj) activeObjectGlow = { objId: glowObj.id, timer: 180, maxTimer: 180 };
+        }
+
+        return true;
+    }
+
+    // ============================================================
     //  SAVE / LOAD SYSTEM (localStorage)
     // ============================================================
     const SAVE_KEY = 'longmen_save';
@@ -9671,6 +10984,7 @@
                 name: n.name, x: n.x, y: n.y, speed: n.speed, facing: n.facing,
                 relationships: { ...n.relationships },
                 skinTone: n.skinTone, hairColor: n.hairColor, clothColor: n.clothColor, color: n.color,
+                affinities: n.affinities,
             })),
             campProgress: { ...campProgress },
             campMilestonesHit: [...campMilestonesHit],
@@ -9741,6 +11055,7 @@
             n.relationships = nd.relationships || {};
             n.skinTone = nd.skinTone; n.hairColor = nd.hairColor;
             n.clothColor = nd.clothColor; n.color = nd.color;
+            if (nd.affinities) n.affinities = nd.affinities;
             npcs.push(n);
         }
 
@@ -9796,6 +11111,8 @@
 
     function newGame() {
         if (!confirm('Neues Spiel starten? Der aktuelle Fortschritt geht verloren.')) return;
+        // Remove beforeunload listener so autosave doesn't re-save during reload
+        window.removeEventListener('beforeunload', saveGame);
         deleteSave();
         location.reload();
     }
@@ -9930,6 +11247,8 @@
 
             // Update persons
             for (const p of persons) p.update(dt);
+            // Update person moods periodically
+            if (Math.floor(gameTick) % 30 === 0) { for (const p of persons) p.mood = getMood(p); }
 
             // Update AI
             updateSpeakerAI(dt);
@@ -9975,10 +11294,11 @@
             }
             if (proverbOverlay && !proverbOverlay.update(dt)) proverbOverlay = null;
 
-            // Update weather, atmospheric effects, boat & micro-events
+            // Update weather, atmospheric effects, boat, micro-events & NPC interactions
             updateWeather(dt);
             updateAtmospheric(dt);
             updateMicroEvents(dt);
+            updateNpcInteractions(dt);
 
             // Check chengyu triggers (every ~100 ticks)
             if (Math.floor(gameTick) % 100 === 0) { checkChengyuTriggers(); checkFestival(); }
@@ -10067,6 +11387,15 @@
         drawQuiz(ctx);
 
         // UI updates (throttled)
+        // Fade command feedback
+        if (commandFeedbackTimer > 0) {
+            commandFeedbackTimer -= rawDt;
+            if (commandFeedbackTimer <= 0) {
+                const fb = document.getElementById('command-feedback');
+                if (fb) fb.classList.remove('visible');
+            }
+        }
+
         uiTimer += rawDt;
         if (uiTimer > 250) {
             uiTimer = 0;
