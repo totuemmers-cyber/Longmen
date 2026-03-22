@@ -8,10 +8,39 @@
     <meta name="apple-mobile-web-app-title" content="Longmen">
     <title>Longmen — Chinesisch-Sprachsimulation</title>
     <style>
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-header-top: #1a1008;
+            --bg-header-bottom: #12100a;
+            --bg-panel: #1e1a14;
+            --bg-panel-mid: #221c12;
+            --bg-canvas: #2d2d1a;
+            --bg-input: #0a0a08;
+            --bg-button: #2a2420;
+            --bg-button-hover: #3a3226;
+            --bg-button-active: #4a3e30;
+            --text-primary: #d4c8a8;
+            --text-secondary: #8a7e6a;
+            --text-muted: #5a5a4a;
+            --text-dim: #6a6a5a;
+            --text-bright: #e0d8c0;
+            --text-activity: #a0a080;
+            --accent-gold: #d4a030;
+            --accent-red: #6a3020;
+            --accent-red-dark: #5a3020;
+            --accent-red-stamp: #a03020;
+            --accent-green: #6a8a5a;
+            --accent-pinyin: #a09070;
+            --border-primary: #4a3e30;
+            --border-section: #3a2a1a;
+            --border-input: #3a3020;
+            --border-divider: #1a1612;
+            --border-progress: #2a2018;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
-            background: #1a1a1a;
-            color: #d4c8a8;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             font-family: 'Courier New', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', monospace;
             overflow: hidden;
             height: 100%;
@@ -26,7 +55,7 @@
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
         #header {
-            background: linear-gradient(180deg, #1a1008 0%, #12100a 100%);
+            background: linear-gradient(180deg, var(--bg-header-top) 0%, var(--bg-header-bottom) 100%);
             border-bottom: 2px solid #6a2020;
             border-image: linear-gradient(90deg, #4a2020, #8a3030, #4a2020) 1;
             padding: 6px 16px;
@@ -38,7 +67,7 @@
         }
         #header h1 {
             font-size: 14px;
-            color: #d4a030;
+            color: var(--accent-gold);
             letter-spacing: 1px;
             white-space: nowrap;
         }
@@ -48,9 +77,9 @@
             gap: 4px;
         }
         #controls button {
-            background: #2a2420;
-            border: 1px solid #4a3e30;
-            color: #d4a030;
+            background: var(--bg-button);
+            border: 1px solid var(--border-primary);
+            color: var(--accent-gold);
             min-width: 44px;
             min-height: 44px;
             padding: 4px 10px;
@@ -61,15 +90,15 @@
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
-        #controls button:hover { background: #3a3226; }
-        #controls button:active { background: #4a3e30; }
+        #controls button:hover { background: var(--bg-button-hover); }
+        #controls button:active { background: var(--bg-button-active); }
         #controls button.active {
-            background: #4a3e30;
-            border-color: #d4a030;
+            background: var(--bg-button-active);
+            border-color: var(--accent-gold);
             color: #fff;
         }
         #time-display {
-            color: #8a7e6a;
+            color: var(--text-secondary);
             font-size: 12px;
             margin-left: 8px;
             white-space: nowrap;
@@ -83,7 +112,7 @@
         #canvas-wrap {
             flex: 1;
             position: relative;
-            background: #2d2d1a;
+            background: var(--bg-canvas);
             min-width: 0;
             min-height: 0;
         }
@@ -95,15 +124,15 @@
         }
         #panel {
             width: 300px;
-            background: linear-gradient(135deg, #1e1a14 0%, #221c12 50%, #1e1a14 100%);
-            border-left: 2px solid #5a3020;
+            background: linear-gradient(135deg, var(--bg-panel) 0%, var(--bg-panel-mid) 50%, var(--bg-panel) 100%);
+            border-left: 2px solid var(--accent-red-dark);
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding: 0;
             font-size: 12px;
             flex-shrink: 0;
             background-image:
-                linear-gradient(135deg, #1e1a14 0%, #221c12 50%, #1e1a14 100%),
+                linear-gradient(135deg, var(--bg-panel) 0%, var(--bg-panel-mid) 50%, var(--bg-panel) 100%),
                 radial-gradient(ellipse at 30% 20%, rgba(200,180,140,0.03) 0%, transparent 60%),
                 radial-gradient(ellipse at 70% 80%, rgba(200,180,140,0.02) 0%, transparent 50%);
         }
@@ -115,9 +144,9 @@
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: #3a3226;
-            border: 2px solid #d4a030;
-            color: #d4a030;
+            background: var(--bg-button-hover);
+            border: 2px solid var(--accent-gold);
+            color: var(--accent-gold);
             font-size: 20px;
             z-index: 100;
             cursor: pointer;
@@ -134,7 +163,7 @@
             #panel {
                 width: 100%;
                 border-left: none;
-                border-top: 2px solid #3a3226;
+                border-top: 2px solid var(--bg-button-hover);
                 max-height: 45%;
                 display: none;
             }
@@ -156,14 +185,14 @@
             #time-display { font-size: 10px; margin-left: 4px; }
         }
         .panel-section {
-            border-bottom: 1px solid #2a2420;
-            border-image: linear-gradient(90deg, transparent, #3a2a1a, #4a3020, #3a2a1a, transparent) 1;
+            border-bottom: 1px solid var(--bg-button);
+            border-image: linear-gradient(90deg, transparent, var(--border-section), #4a3020, var(--border-section), transparent) 1;
             padding: 10px 12px;
             position: relative;
         }
         .panel-section h2 {
             font-size: 12px;
-            color: #d4a030;
+            color: var(--accent-gold);
             margin-bottom: 8px;
             letter-spacing: 2px;
             text-align: center;
@@ -172,7 +201,7 @@
         .panel-section h2::before, .panel-section h2::after {
             content: '◆';
             font-size: 6px;
-            color: #6a3020;
+            color: var(--accent-red);
             vertical-align: middle;
             margin: 0 6px;
         }
@@ -186,7 +215,7 @@
             width: 40px;
             height: 40px;
             border-radius: 2px;
-            border: 2px solid #6a3020;
+            border: 2px solid var(--accent-red);
             box-shadow: inset 0 0 8px rgba(160,120,60,0.15), 0 0 4px rgba(100,40,20,0.3);
             display: flex;
             align-items: center;
@@ -195,12 +224,12 @@
         }
         .char-name {
             font-size: 14px;
-            color: #e0d8c0;
+            color: var(--text-bright);
             font-weight: bold;
         }
         .char-role {
             font-size: 10px;
-            color: #8a7e6a;
+            color: var(--text-secondary);
         }
         .stat-row {
             display: flex;
@@ -210,13 +239,13 @@
         }
         .stat-label {
             width: 75px;
-            color: #8a7e6a;
+            color: var(--text-secondary);
             font-size: 11px;
         }
         .stat-bar-bg {
             flex: 1;
             height: 8px;
-            background: #0a0a08;
+            background: var(--bg-input);
             border-radius: 2px;
             overflow: hidden;
         }
@@ -229,10 +258,10 @@
             width: 24px;
             text-align: right;
             font-size: 10px;
-            color: #8a7e6a;
+            color: var(--text-secondary);
         }
         .activity {
-            color: #a0a080;
+            color: var(--text-activity);
             font-size: 11px;
             font-style: italic;
             margin-top: 4px;
@@ -245,13 +274,13 @@
         }
         .need-label {
             width: 55px;
-            color: #8a7e6a;
+            color: var(--text-secondary);
             font-size: 10px;
         }
         .need-bar-bg {
             flex: 1;
             height: 6px;
-            background: #0a0a08;
+            background: var(--bg-input);
             border-radius: 2px;
             overflow: hidden;
         }
@@ -264,20 +293,20 @@
             width: 100%;
             padding: 5px 8px;
             margin-bottom: 6px;
-            background: #0a0a08;
-            border: 1px solid #3a3020;
+            background: var(--bg-input);
+            border: 1px solid var(--border-input);
             border-radius: 2px;
-            color: #d4c8a8;
+            color: var(--text-primary);
             font-family: 'Courier New', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', monospace;
             font-size: 11px;
             outline: none;
             box-sizing: border-box;
         }
         #vocab-search:focus {
-            border-color: #d4a030;
+            border-color: var(--accent-gold);
         }
         #vocab-search::placeholder {
-            color: #5a5a4a;
+            color: var(--text-muted);
             font-style: italic;
         }
         .vocab-list {
@@ -289,27 +318,27 @@
             display: flex;
             padding: 6px 4px;
             font-size: 12px;
-            border-bottom: 1px solid #1a1612;
+            border-bottom: 1px solid var(--border-divider);
             line-height: 1.4;
         }
-        .vocab-word .pseudo { color: #d4a030; width: 42px; flex-shrink: 0; }
-        .vocab-word .pinyin { color: #a09070; font-size: 10px; width: 70px; flex-shrink: 0; text-align: center; }
-        .vocab-word .meaning { color: #6a8a5a; flex: 1; text-align: right; }
+        .vocab-word .pseudo { color: var(--accent-gold); width: 42px; flex-shrink: 0; }
+        .vocab-word .pinyin { color: var(--accent-pinyin); font-size: 10px; width: 70px; flex-shrink: 0; text-align: center; }
+        .vocab-word .meaning { color: var(--accent-green); flex: 1; text-align: right; }
         .vocab-word.new { animation: flashGreen 1s; }
         @keyframes flashGreen {
             0% { background: #2a4a2a; }
             100% { background: transparent; }
         }
         .progress-text {
-            color: #8a7e6a;
+            color: var(--text-secondary);
             font-size: 11px;
             margin-bottom: 6px;
         }
         .progress-bar-bg {
             width: 100%;
             height: 10px;
-            background: #0a0a08;
-            border: 1px solid #2a2018;
+            background: var(--bg-input);
+            border: 1px solid var(--border-progress);
             border-radius: 1px;
             overflow: hidden;
             margin-bottom: 8px;
@@ -322,8 +351,8 @@
         }
         .seal-stamp {
             display: inline-block;
-            color: #a03020;
-            border: 1.5px solid #a03020;
+            color: var(--accent-red-stamp);
+            border: 1.5px solid var(--accent-red-stamp);
             padding: 1px 3px;
             font-size: 9px;
             line-height: 1;
@@ -340,15 +369,15 @@
         .log-entry {
             padding: 2px 0;
             font-size: 10px;
-            color: #6a6a5a;
-            border-bottom: 1px solid #1a1612;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border-divider);
         }
         .log-entry .log-time { color: #4a4a3a; margin-right: 6px; }
-        .log-entry.learn { color: #6a8a5a; }
-        .log-entry.speak { color: #a0a080; }
+        .log-entry.learn { color: var(--accent-green); }
+        .log-entry.speak { color: var(--text-activity); }
         #command-bar {
-            background: linear-gradient(180deg, #12100a 0%, #1a1008 100%);
-            border-top: 1px solid #3a2a1a;
+            background: linear-gradient(180deg, var(--bg-header-bottom) 0%, var(--bg-header-top) 100%);
+            border-top: 1px solid var(--border-section);
             padding: 4px 12px;
             display: flex;
             align-items: center;
@@ -356,7 +385,7 @@
             flex-shrink: 0;
         }
         #command-label {
-            color: #6a3020;
+            color: var(--accent-red);
             font-size: 13px;
             font-family: 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif;
             flex-shrink: 0;
@@ -364,21 +393,21 @@
         #command-input {
             flex: 1;
             padding: 5px 8px;
-            background: #0a0a08;
-            border: 1px solid #3a3020;
+            background: var(--bg-input);
+            border: 1px solid var(--border-input);
             border-radius: 2px;
-            color: #d4c8a8;
+            color: var(--text-primary);
             font-family: 'Courier New', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', monospace;
             font-size: 12px;
             outline: none;
             min-width: 0;
         }
-        #command-input:focus { border-color: #d4a030; }
-        #command-input::placeholder { color: #5a5a4a; font-style: italic; }
+        #command-input:focus { border-color: var(--accent-gold); }
+        #command-input::placeholder { color: var(--text-muted); font-style: italic; }
         #command-send {
-            background: #2a2420;
-            border: 1px solid #4a3e30;
-            color: #d4a030;
+            background: var(--bg-button);
+            border: 1px solid var(--border-primary);
+            color: var(--accent-gold);
             min-width: 36px;
             min-height: 32px;
             font-size: 14px;
@@ -386,13 +415,13 @@
             border-radius: 2px;
             flex-shrink: 0;
         }
-        #command-send:hover { background: #3a3226; }
-        #command-send:active { background: #4a3e30; }
+        #command-send:hover { background: var(--bg-button-hover); }
+        #command-send:active { background: var(--bg-button-active); }
         #command-feedback {
-            color: #8a7e6a;
+            color: var(--text-secondary);
             font-size: 10px;
             padding: 2px 12px 2px;
-            background: #12100a;
+            background: var(--bg-header-bottom);
             display: none;
             flex-shrink: 0;
         }
@@ -403,25 +432,25 @@
     <div id="header">
         <h1>LONGMEN 龙门 — CHINESISCH-SPRACHSIMULATION</h1>
         <div id="controls">
-            <button id="btn-pause" onclick="setSpeed(0)">II</button>
-            <button id="btn-1x" class="active" onclick="setSpeed(1)">1x</button>
-            <button id="btn-2x" onclick="setSpeed(2)">2x</button>
-            <button id="btn-3x" onclick="setSpeed(3)">3x</button>
-            <button id="btn-sound" onclick="toggleSound()">♪</button>
-            <button id="btn-save" onclick="manualSave()" title="Speichern">&#128190;</button>
-            <button id="btn-new" onclick="newGame()" title="Neues Spiel">&#9733;</button>
+            <button id="btn-pause" onclick="setSpeed(0)" aria-label="Pause">II</button>
+            <button id="btn-1x" class="active" onclick="setSpeed(1)" aria-label="Normalgeschwindigkeit">1x</button>
+            <button id="btn-2x" onclick="setSpeed(2)" aria-label="Doppelte Geschwindigkeit">2x</button>
+            <button id="btn-3x" onclick="setSpeed(3)" aria-label="Dreifache Geschwindigkeit">3x</button>
+            <button id="btn-sound" onclick="toggleSound()" aria-label="Ton an/aus">♪</button>
+            <button id="btn-save" onclick="manualSave()" title="Speichern" aria-label="Speichern">&#128190;</button>
+            <button id="btn-new" onclick="newGame()" title="Neues Spiel" aria-label="Neues Spiel">&#9733;</button>
             <span id="time-display">Tag 1 — 06:00</span>
         </div>
     </div>
-    <button id="panel-toggle" onclick="togglePanel()">i</button>
+    <button id="panel-toggle" onclick="togglePanel()" aria-label="Seitenpanel umschalten">i</button>
     <div id="command-bar">
         <span id="command-label">命令</span>
         <input type="text" id="command-input" placeholder="Befehl eingeben (Pinyin/Hanzi)..." autocomplete="off">
-        <button id="command-send" onclick="submitCommand()">▶</button>
+        <button id="command-send" onclick="submitCommand()" aria-label="Befehl senden">▶</button>
     </div>
     <div id="main">
         <div id="canvas-wrap">
-            <canvas id="gameCanvas"></canvas>
+            <canvas id="gameCanvas" role="img" aria-label="Longmen Spielwelt — chinesisches Dorf mit Charakteren"></canvas>
         </div>
         <div id="panel">
             <div id="char1-panel" class="panel-section"></div>
@@ -462,6 +491,7 @@
     let soundEnabled = true;
     let audioStarted = false;
     let musicPlaying = false;
+    let musicGeneration = 0;
     let musicNodes = [];
 
     function ensureAudio() {
@@ -502,6 +532,7 @@
     function stopChineseMusic() {
         if (!musicPlaying) return;
         musicPlaying = false;
+        musicGeneration++;
         stopSeasonalAmbient();
         for (const node of musicNodes) {
             try {
@@ -900,11 +931,12 @@
         percDest.gain.value = 1.0;
         percDest.connect(dest);
         musicNodes.push(percDest);
-        schedulePercLoop(percDest);
+        schedulePercLoop(percDest, musicGeneration);
     }
 
-    function schedulePercLoop(dest) {
-        if (!audioCtx || !soundEnabled || !musicPlaying) { setTimeout(() => schedulePercLoop(dest), 1000); return; }
+    function schedulePercLoop(dest, gen) {
+        if (gen !== musicGeneration) return;
+        if (!audioCtx || !soundEnabled || !musicPlaying) { setTimeout(() => schedulePercLoop(dest, gen), 1000); return; }
 
         const m = activeMoodParams;
         const now = audioCtx.currentTime;
@@ -980,7 +1012,7 @@
             }
         }
 
-        setTimeout(() => schedulePercLoop(dest), (barLen * bars - 0.2) * 1000);
+        setTimeout(() => schedulePercLoop(dest, gen), (barLen * bars - 0.2) * 1000);
     }
 
     // 木鱼 Muyu — wooden fish block (hollow, warm click)
@@ -1002,6 +1034,7 @@
         filt.connect(g);
         osc.start(time);
         osc.stop(time + 0.12);
+        osc.onended = () => { osc.disconnect(); filt.disconnect(); g.disconnect(); };
         // Click transient
         const ng = audioCtx.createGain();
         ng.gain.setValueAtTime(0.4 * (vol || 0.3), time);
@@ -1017,6 +1050,7 @@
         ns.connect(nf);
         ns.start(time);
         ns.stop(time + 0.02);
+        ns.onended = () => { ns.disconnect(); nf.disconnect(); ng.disconnect(); };
     }
 
     // 梆子 Bangzi — wooden clapper (bright, sharp)
@@ -1037,6 +1071,7 @@
         filt.connect(g);
         osc.start(time);
         osc.stop(time + 0.05);
+        osc.onended = () => { osc.disconnect(); filt.disconnect(); g.disconnect(); };
     }
 
     // 锣 Luo — gong (metallic shimmer with pitch bend)
@@ -1083,6 +1118,8 @@
         ns.connect(nf);
         ns.start(time);
         ns.stop(time + dur * 0.4);
+        // Cleanup: longest node is osc (dur), osc2 (dur*0.7), ns (dur*0.4)
+        osc.onended = () => { osc.disconnect(); g.disconnect(); osc2.disconnect(); g2.disconnect(); ns.disconnect(); nf.disconnect(); ng.disconnect(); };
     }
 
     // 磬 Qing — temple bell/chime (pure, resonant, long decay)
@@ -1111,6 +1148,7 @@
         g2.connect(dest);
         osc2.start(time);
         osc2.stop(time + dur * 0.5);
+        osc.onended = () => { osc.disconnect(); g.disconnect(); osc2.disconnect(); g2.disconnect(); };
     }
 
     // 鼓 Gu — Chinese drum (deeper, warmer than Western kick)
@@ -1141,6 +1179,7 @@
         ns.connect(filt);
         ns.start(time);
         ns.stop(time + 0.04);
+        osc.onended = () => { osc.disconnect(); g.disconnect(); ns.disconnect(); filt.disconnect(); ng.disconnect(); };
     }
 
     // === 竹笛 DIZI (Chinese bamboo flute) ===
@@ -1153,8 +1192,10 @@
         musicNodes.push(diziGainNode);
 
         let lastNoteIdx = -1;
+        const gen = musicGeneration;
 
         function playDiziPhrase() {
+            if (gen !== musicGeneration) return;
             if (!audioCtx || !musicPlaying) return;
             const m = activeMoodParams;
             if (m.diziVol <= 0) { setTimeout(playDiziPhrase, 5000); return; }
@@ -1286,6 +1327,7 @@
         osc.connect(noteGain);
         osc.start(t);
         osc.stop(t + dur + 0.05);
+        osc.onended = () => { osc.disconnect(); noteGain.disconnect(); buzzOsc.disconnect(); buzzGain.disconnect(); vib.disconnect(); vibG.disconnect(); breathSrc.disconnect(); breathFilt.disconnect(); breathGain.disconnect(); };
     }
 
     // === 古筝 GUZHENG (plucked zither — 21 strings) ===
@@ -1296,7 +1338,10 @@
         guzhengGainNode.connect(dest);
         musicNodes.push(guzhengGainNode);
 
+        const gen = musicGeneration;
+
         function playGuzhengPhrase() {
+            if (gen !== musicGeneration) return;
             if (!audioCtx || !musicPlaying) return;
             const m = activeMoodParams;
             if (m.guzhengVol <= 0) { setTimeout(playGuzhengPhrase, 5000); return; }
@@ -1415,6 +1460,7 @@
         ns.connect(nf);
         ns.start(t);
         ns.stop(t + 0.03);
+        osc.onended = () => { osc.disconnect(); noteGain.disconnect(); osc2.disconnect(); g2.disconnect(); osc3.disconnect(); g3.disconnect(); ns.disconnect(); nf.disconnect(); ng.disconnect(); };
     }
 
     // === 二胡 ERHU (bowed 2-string fiddle) ===
@@ -1425,7 +1471,10 @@
         erhuGainNode.connect(dest);
         musicNodes.push(erhuGainNode);
 
+        const gen = musicGeneration;
+
         function playErhuPhrase() {
+            if (gen !== musicGeneration) return;
             if (!audioCtx || !musicPlaying) return;
             const m = activeMoodParams;
             if (m.erhuVol <= 0 || m.erhuDur[1] <= 0) { setTimeout(playErhuPhrase, 8000); return; }
@@ -1521,6 +1570,7 @@
 
         osc.start(t);
         osc.stop(t + dur + 0.05);
+        osc.onended = () => { osc.disconnect(); filt.disconnect(); nasalFilt.disconnect(); noteGain.disconnect(); vib.disconnect(); vibG.disconnect(); bowSrc.disconnect(); bowFilt.disconnect(); bowGain.disconnect(); };
     }
 
     // === ADAPTIVE AMBIENT (nature sounds — wind through bamboo, distant water) ===
@@ -2697,6 +2747,73 @@
     }
 
     // Set target with automatic river-crossing and building-avoidance waypoints
+    function entityDistTo(entity, ox, oy) {
+        return Math.sqrt((entity.x - ox) ** 2 + (entity.y - oy) ** 2);
+    }
+
+    function moveEntityToward(entity, tx, ty, dt, speed, speedMul, stuckThreshold, targetType) {
+        // Navigate through waypoints first
+        let goalX = tx, goalY = ty;
+        if (entity.waypoints && entity.waypoints.length > 0) {
+            goalX = entity.waypoints[0].x;
+            goalY = entity.waypoints[0].y;
+        }
+        const dx = goalX - entity.x;
+        const dy = goalY - entity.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 8 && entity.waypoints && entity.waypoints.length > 0) {
+            entity.waypoints.shift();
+            entity.stuckTimer = 0;
+            entity.steerFrames = 0;
+            return false;
+        }
+        if (dist < 3 && (!entity.waypoints || entity.waypoints.length === 0)) {
+            entity.stuckTimer = 0;
+            entity.steerFrames = 0;
+            return true;
+        }
+        // Stuck detection: if barely moved, skip waypoint or give up
+        const movedDist = Math.sqrt((entity.x - entity.lastMoveX) ** 2 + (entity.y - entity.lastMoveY) ** 2);
+        entity.stuckTimer += dt;
+        if (entity.stuckTimer > stuckThreshold) {
+            entity.stuckTimer = 0;
+            if (movedDist < 5) {
+                entity.steerFrames = 0;
+                if (entity.waypoints && entity.waypoints.length > 0) {
+                    entity.waypoints.shift();
+                } else {
+                    return true; // give up, treat as arrived
+                }
+            }
+            entity.lastMoveX = entity.x;
+            entity.lastMoveY = entity.y;
+        }
+        const spd = speed * dt * speedMul;
+        const step = Math.min(spd, dist);
+        const dirX = dx / dist, dirY = dy / dist;
+        // Use cached steer direction if still active, otherwise recalculate
+        if (entity.steerFrames > 0) {
+            entity.steerFrames -= dt;
+            if (!isBlocked(entity.x + entity.steerDx * step, entity.y + entity.steerDy * step, targetType)) {
+                entity.x += entity.steerDx * step;
+                entity.y += entity.steerDy * step;
+                entity.facing = Math.atan2(entity.steerDy, entity.steerDx);
+                return dist < 8 && (!entity.waypoints || entity.waypoints.length === 0);
+            }
+            entity.steerFrames = 0;
+        }
+        const steer = steerAroundObstacles(entity.x, entity.y, dirX, dirY, step, targetType);
+        if (Math.abs(steer.dx - dirX) > 0.1 || Math.abs(steer.dy - dirY) > 0.1) {
+            entity.steerDx = steer.dx;
+            entity.steerDy = steer.dy;
+            entity.steerFrames = 20;
+        }
+        entity.x += steer.dx * step;
+        entity.y += steer.dy * step;
+        entity.facing = Math.atan2(steer.dy, steer.dx);
+        return dist < 8 && (!entity.waypoints || entity.waypoints.length === 0);
+    }
+
     function setTargetWithPath(character, tx, ty) {
         // Clamp target out of the river to prevent characters from targeting positions inside it
         tx = clampOutOfRiver(tx);
@@ -4282,79 +4399,16 @@
         }
 
         distTo(ox, oy) {
-            return Math.sqrt((this.x - ox) ** 2 + (this.y - oy) ** 2);
+            return entityDistTo(this, ox, oy);
         }
 
         moveToward(tx, ty, dt) {
-            // Navigate through waypoints first
-            let goalX = tx, goalY = ty;
-            if (this.waypoints && this.waypoints.length > 0) {
-                goalX = this.waypoints[0].x;
-                goalY = this.waypoints[0].y;
-            }
-            const dx = goalX - this.x;
-            const dy = goalY - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
-                this.waypoints.shift();
-                this.stuckTimer = 0;
-                this.steerFrames = 0;
-                return false;
-            }
-            if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) {
-                this.stuckTimer = 0;
-                this.steerFrames = 0;
-                return true;
-            }
-            // Stuck detection: if barely moved in last ~2 seconds, skip waypoint or give up
-            const movedDist = Math.sqrt((this.x - this.lastMoveX) ** 2 + (this.y - this.lastMoveY) ** 2);
-            this.stuckTimer += dt;
-            if (this.stuckTimer > 80) {
-                this.stuckTimer = 0;
-                if (movedDist < 5) {
-                    // Stuck! Skip current waypoint or give up entirely
-                    this.steerFrames = 0;
-                    if (this.waypoints && this.waypoints.length > 0) {
-                        this.waypoints.shift();
-                    } else {
-                        return true; // give up, treat as arrived
-                    }
-                }
-                this.lastMoveX = this.x;
-                this.lastMoveY = this.y;
-            }
-            const spd = this.moveSpeed * dt * 0.4;
-            const step = Math.min(spd, dist);
-            const dirX = dx / dist, dirY = dy / dist;
-            // Determine target type for building avoidance
             let tType = null;
             if (this.currentAction) {
                 if (this.currentAction.target && typeof this.currentAction.target === 'string') tType = this.currentAction.target;
                 else { const a = ACTION_DEFS.find(a => a.id === this.currentAction.id); if (a) tType = a.target; }
             }
-            // Use cached steer direction if still active, otherwise recalculate
-            if (this.steerFrames > 0) {
-                this.steerFrames -= dt;
-                // Check if cached direction is still valid
-                if (!isBlocked(this.x + this.steerDx * step, this.y + this.steerDy * step, tType)) {
-                    this.x += this.steerDx * step;
-                    this.y += this.steerDy * step;
-                    this.facing = Math.atan2(this.steerDy, this.steerDx);
-                    return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
-                }
-                this.steerFrames = 0;
-            }
-            const steer = steerAroundObstacles(this.x, this.y, dirX, dirY, step, tType);
-            // If steered away from original direction, cache it to prevent jitter
-            if (Math.abs(steer.dx - dirX) > 0.1 || Math.abs(steer.dy - dirY) > 0.1) {
-                this.steerDx = steer.dx;
-                this.steerDy = steer.dy;
-                this.steerFrames = 20;
-            }
-            this.x += steer.dx * step;
-            this.y += steer.dy * step;
-            this.facing = Math.atan2(steer.dy, steer.dx);
-            return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
+            return moveEntityToward(this, tx, ty, dt, this.moveSpeed, 0.4, 80, tType);
         }
     }
 
@@ -8359,72 +8413,11 @@
         }
 
         distTo(ox, oy) {
-            return Math.sqrt((this.x - ox) ** 2 + (this.y - oy) ** 2);
+            return entityDistTo(this, ox, oy);
         }
 
         moveToward(tx, ty, dt) {
-            // Navigate through waypoints first
-            let goalX = tx, goalY = ty;
-            if (this.waypoints && this.waypoints.length > 0) {
-                goalX = this.waypoints[0].x;
-                goalY = this.waypoints[0].y;
-            }
-            const dx = goalX - this.x;
-            const dy = goalY - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 8 && this.waypoints && this.waypoints.length > 0) {
-                this.waypoints.shift();
-                this.stuckTimer = 0;
-                this.steerFrames = 0;
-                return false;
-            }
-            if (dist < 3 && (!this.waypoints || this.waypoints.length === 0)) {
-                this.stuckTimer = 0;
-                this.steerFrames = 0;
-                return true;
-            }
-            // Stuck detection
-            const movedDist = Math.sqrt((this.x - this.lastMoveX) ** 2 + (this.y - this.lastMoveY) ** 2);
-            this.stuckTimer += dt;
-            if (this.stuckTimer > 30) {
-                this.stuckTimer = 0;
-                if (movedDist < 5) {
-                    this.steerFrames = 0;
-                    if (this.waypoints && this.waypoints.length > 0) {
-                        this.waypoints.shift();
-                    } else {
-                        return true;
-                    }
-                }
-                this.lastMoveX = this.x;
-                this.lastMoveY = this.y;
-            }
-            const spd = this.speed * dt * 0.35;
-            const step = Math.min(spd, dist);
-            const dirX = dx / dist, dirY = dy / dist;
-            // Use cached steer direction if still active, otherwise recalculate
-            if (this.steerFrames > 0) {
-                this.steerFrames -= dt;
-                // Check if cached direction is still valid
-                if (!isBlocked(this.x + this.steerDx * step, this.y + this.steerDy * step, null)) {
-                    this.x += this.steerDx * step;
-                    this.y += this.steerDy * step;
-                    this.facing = Math.atan2(this.steerDy, this.steerDx);
-                    return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
-                }
-                this.steerFrames = 0;
-            }
-            const steer = steerAroundObstacles(this.x, this.y, dirX, dirY, step, null);
-            // If steered away from original direction, cache it to prevent jitter
-            if (Math.abs(steer.dx - dirX) > 0.1 || Math.abs(steer.dy - dirY) > 0.1) {
-                this.steerDx = steer.dx;
-                this.steerDy = steer.dy;
-                this.steerFrames = 20;
-            }
-            this.x += steer.dx * step;
-            this.y += steer.dy * step;
-            this.facing = Math.atan2(steer.dy, steer.dx);
-            return dist < 8 && (!this.waypoints || this.waypoints.length === 0);
+            return moveEntityToward(this, tx, ty, dt, this.speed, 0.35, 30, null);
         }
     }
 
@@ -10843,6 +10836,15 @@
         const raw = inputEl.value.trim();
         if (!raw || persons.length < 2) return;
 
+        // Help command
+        const lower = raw.toLowerCase();
+        if (lower === 'hilfe' || lower === 'help' || lower === '?') {
+            showCommandFeedback('Gelernte Wörter eingeben (Pinyin oder Hanzi). Beispiele: "chi fan", "he cha", "kan shu"');
+            addLog('Hilfe: Gelernte Wörter als Befehle eingeben (Pinyin oder Hanzi).', 'speak');
+            inputEl.value = '';
+            return;
+        }
+
         const learner = persons[1];
 
         // Check learner has learned words
@@ -11004,6 +11006,7 @@
             return true;
         } catch (e) {
             console.warn('Save failed:', e);
+            addLog('Speichern fehlgeschlagen!', 'speak');
             return false;
         }
     }
@@ -11022,45 +11025,65 @@
     }
 
     function applySaveData(data) {
+        const clampNum = (v, min, max, fallback) => {
+            const n = Number(v);
+            return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+        };
+        const safeStr = (v, fallback) => typeof v === 'string' ? v : fallback;
+
         // Time
-        gameDay = data.time.gameDay;
-        gameHour = data.time.gameHour;
-        gameMinute = data.time.gameMinute;
-        gameTick = data.time.gameTick || 0;
+        gameDay = clampNum(data.time.gameDay, 0, 99999, 1);
+        gameHour = clampNum(data.time.gameHour, 0, 23, 6);
+        gameMinute = clampNum(data.time.gameMinute, 0, 59, 0);
+        gameTick = clampNum(data.time.gameTick, 0, Infinity, 0);
 
         // Persons
         persons = [];
         for (const pd of data.persons) {
-            const p = new Person(pd.name, pd.role, pd.color);
-            p.geschick = pd.geschick; p.neugier = pd.neugier;
-            p.geselligkeit = pd.geselligkeit; p.wahrnehmung = pd.wahrnehmung;
-            p.x = pd.x; p.y = pd.y; p.targetX = pd.x; p.targetY = pd.y;
-            p.facing = pd.facing || 0;
-            p.hunger = pd.hunger; p.thirst = pd.thirst; p.energy = pd.energy;
-            p.knownWords = new Set(pd.knownWords || []);
-            p.wordHistory = pd.wordHistory || [];
-            p.relationships = pd.relationships || {};
-            p.skinTone = pd.skinTone; p.hairColor = pd.hairColor; p.clothColor = pd.clothColor;
-            p.actionHistory = pd.actionHistory || [];
-            p.followMode = pd.followMode || 'following';
+            const p = new Person(safeStr(pd.name, 'Person'), safeStr(pd.role, 'speaker'), safeStr(pd.color, '#aa7a4a'));
+            p.geschick = clampNum(pd.geschick, 1, 10, 5);
+            p.neugier = clampNum(pd.neugier, 1, 10, 5);
+            p.geselligkeit = clampNum(pd.geselligkeit, 1, 10, 5);
+            p.wahrnehmung = clampNum(pd.wahrnehmung, 1, 10, 5);
+            p.x = clampNum(pd.x, 0, WORLD_W, 400);
+            p.y = clampNum(pd.y, 0, WORLD_H, 300);
+            p.targetX = p.x; p.targetY = p.y;
+            p.facing = clampNum(pd.facing, -Math.PI, Math.PI, 0);
+            p.hunger = clampNum(pd.hunger, 0, 100, 70);
+            p.thirst = clampNum(pd.thirst, 0, 100, 70);
+            p.energy = clampNum(pd.energy, 0, 100, 70);
+            const validWords = (pd.knownWords || []).filter(w => typeof w === 'string' && w in vocab);
+            p.knownWords = new Set(validWords);
+            p.wordHistory = Array.isArray(pd.wordHistory) ? pd.wordHistory : [];
+            p.relationships = (pd.relationships && typeof pd.relationships === 'object') ? pd.relationships : {};
+            p.skinTone = safeStr(pd.skinTone, p.skinTone);
+            p.hairColor = safeStr(pd.hairColor, p.hairColor);
+            p.clothColor = safeStr(pd.clothColor, p.clothColor);
+            p.actionHistory = Array.isArray(pd.actionHistory) ? pd.actionHistory : [];
+            p.followMode = safeStr(pd.followMode, 'following');
             persons.push(p);
         }
 
         // NPCs
         npcs = [];
         for (const nd of data.npcs) {
-            const n = new NPC(nd.name);
-            n.x = nd.x; n.y = nd.y; n.targetX = nd.x; n.targetY = nd.y;
-            n.speed = nd.speed; n.facing = nd.facing || 0;
-            n.relationships = nd.relationships || {};
-            n.skinTone = nd.skinTone; n.hairColor = nd.hairColor;
-            n.clothColor = nd.clothColor; n.color = nd.color;
-            if (nd.affinities) n.affinities = nd.affinities;
+            const n = new NPC(safeStr(nd.name, 'NPC'));
+            n.x = clampNum(nd.x, 0, WORLD_W, 400);
+            n.y = clampNum(nd.y, 0, WORLD_H, 300);
+            n.targetX = n.x; n.targetY = n.y;
+            n.speed = clampNum(nd.speed, 0.1, 2.0, 0.6);
+            n.facing = clampNum(nd.facing, -Math.PI, Math.PI, 0);
+            n.relationships = (nd.relationships && typeof nd.relationships === 'object') ? nd.relationships : {};
+            n.skinTone = safeStr(nd.skinTone, n.skinTone);
+            n.hairColor = safeStr(nd.hairColor, n.hairColor);
+            n.clothColor = safeStr(nd.clothColor, n.clothColor);
+            n.color = safeStr(nd.color, n.color);
+            if (nd.affinities && typeof nd.affinities === 'object') n.affinities = nd.affinities;
             npcs.push(n);
         }
 
         // Camp
-        campProgress = data.campProgress || {};
+        campProgress = (data.campProgress && typeof data.campProgress === 'object') ? data.campProgress : {};
         campMilestonesHit = new Set(data.campMilestonesHit || []);
         campDecorations = [];
         for (const m of CAMP_MILESTONES) {
@@ -11075,17 +11098,17 @@
 
         // Weather
         if (data.weather) {
-            currentWeather = data.weather.currentWeather || 'clear';
-            weatherIntensity = data.weather.weatherIntensity || 0;
+            currentWeather = safeStr(data.weather.currentWeather, 'clear');
+            weatherIntensity = clampNum(data.weather.weatherIntensity, 0, 1, 0);
             targetWeatherIntensity = weatherIntensity;
         }
 
         // Storytelling
-        storytelling.cooldownDay = data.storytellingCooldownDay || -1;
+        storytelling.cooldownDay = clampNum(data.storytellingCooldownDay, -1, 99999, -1);
 
         // Event log
-        eventLog = data.eventLog || [];
-        vocabHistory = data.vocabHistory || [];
+        eventLog = Array.isArray(data.eventLog) ? data.eventLog : [];
+        vocabHistory = Array.isArray(data.vocabHistory) ? data.vocabHistory : [];
         chengyuTriggered = new Set(data.chengyuTriggered || []);
     }
 
@@ -11093,8 +11116,10 @@
         localStorage.removeItem(SAVE_KEY);
     }
 
+    let _autosaveId = null;
     function setupAutosave() {
-        setInterval(() => {
+        if (_autosaveId) clearInterval(_autosaveId);
+        _autosaveId = setInterval(() => {
             if (gameSpeed > 0) saveGame();
         }, AUTOSAVE_INTERVAL);
         window.addEventListener('beforeunload', saveGame);
